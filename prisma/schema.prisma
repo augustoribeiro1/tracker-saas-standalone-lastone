@@ -1,0 +1,225 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
+  name     String?
+  password String
+  plan     String   @default("free")
+  
+  stripeCustomerId String?
+  maxCampaigns     Int     @default(2)
+  maxVariations    Int     @default(2)
+  maxClicks        Int     @default(1000)
+  maxDomains       Int     @default(0)
+  status           String  @default("active")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  campaigns       Campaign[]
+  webhookConfigs  WebhookConfiguration[]
+  customDomains   CustomDomain[]
+  subscriptions   Subscription[]
+  accounts        Account[]
+  sessions        Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+}
+
+model Campaign {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  slug      String   @unique
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variations Variation[]
+  events     Event[]
+}
+
+model Variation {
+  id             Int      @id @default(autoincrement())
+  campaignId     Int
+  name           String
+  destinationUrl String
+  weight         Int      @default(50)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  events   Event[]
+}
+
+model Event {
+  id           Int      @id @default(autoincrement())
+  clickId      String
+  campaignId   Int
+  variationId  Int
+  eventType    String
+  eventName    String?
+  eventValue   Float?
+  userAgent    String?
+  ipAddress    String?
+  referer      String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  utmTerm      String?
+  utmContent   String?
+  createdAt    DateTime @default(now())
+  
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  variation Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  
+  @@index([clickId])
+  @@index([campaignId])
+  @@index([variationId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model WebhookConfiguration {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  campaignId   Int?
+  platform     String
+  webhookUrl   String
+  webhookSecret String?
+  status       String   @default("active")
+  totalReceived Int     @default(0)
+  lastReceivedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs WebhookLog[]
+}
+
+model WebhookLog {
+  id           Int      @id @default(autoincrement())
+  webhookId    Int
+  payload      String
+  statusCode   Int?
+  error        String?
+  createdAt    DateTime @default(now())
+  
+  webhook WebhookConfiguration @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+}
+
+model CustomDomain {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  domain          String    @unique
+  status          String    @default("pending")
+  dnsConfigured   Boolean   @default(false)
+  dnsVerifiedAt   DateTime?
+  sslStatus       String    @default("pending")
+  sslIssuedAt     DateTime?
+  lastCheckedAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Plan {
+  id                    String   @id @default(cuid())
+  name                  String   @unique
+  displayName           String
+  maxCampaigns          Int
+  maxVariations         Int
+  maxClicks             Int
+  maxDomains            Int
+  features              String
+  monthlyPrice          Float
+  yearlyPrice           Float
+  stripePriceIdMonthly  String?
+  stripePriceIdYearly   String?
+  stripeProductId       String?
+  currency              String   @default("BRL")
+  active                Boolean  @default(true)
+  popular               Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                      Int       @id @default(autoincrement())
+  userId                  Int
+  planId                  String
+  stripeSubscriptionId    String    @unique
+  stripeCustomerId        String
+  stripePriceId           String
+  stripeCurrentPeriodEnd  DateTime?
+  status                  String
+  interval                String
+  cancelAtPeriodEnd       Boolean   @default(false)
+  canceledAt              DateTime?
+  trialEnd                DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+}
+
+model UsageRecord {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  year          Int
+  month         Int
+  totalClicks   Int      @default(0)
+  totalCampaigns Int     @default(0)
+  totalDomains  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, year, month])
+}
