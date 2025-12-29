@@ -17,7 +17,6 @@ export async function GET(
       where: { slug, status: 'active' },
       include: { 
         variations: { 
-          where: { active: true },
           orderBy: { id: 'asc' }
         } 
       }
@@ -29,8 +28,8 @@ export async function GET(
     
     // 2. Verificar utm_term existente (visitante retornando)
     const existingUtmTerm = searchParams.get('utm_term');
-    let clickId: string;
-    let variationId: number;
+    let clickId: string | undefined;
+    let variationId: number | undefined;
     
     if (existingUtmTerm) {
       const trackingData = parseTrackingCode(existingUtmTerm);
@@ -41,7 +40,7 @@ export async function GET(
     }
     
     // 3. Novo visitante - selecionar variação
-    if (!clickId!) {
+    if (!clickId) {
       clickId = generateClickId();
       const variation = selectVariation(campaign.variations);
       variationId = variation.id;
@@ -81,7 +80,7 @@ export async function GET(
     });
     
     // Injetar tracking na utm_term
-    const trackingCode = generateTrackingCode(campaign.id, variationId, clickId);
+    const trackingCode = generateTrackingCode(campaign.id, variationId!, clickId);
     destinationUrl.searchParams.set('utm_term', trackingCode);
     
     // 6. Redirect 302
@@ -94,11 +93,12 @@ export async function GET(
 }
 
 function selectVariation(variations: any[]) {
-  const random = Math.random() * 100;
+  const totalWeight = variations.reduce((sum, v) => sum + v.weight, 0);
+  const random = Math.random() * totalWeight;
   let cumulative = 0;
   
   for (const variation of variations) {
-    cumulative += variation.percentage;
+    cumulative += variation.weight;
     if (random <= cumulative) return variation;
   }
   
