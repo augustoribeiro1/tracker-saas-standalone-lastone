@@ -38,35 +38,35 @@ export async function GET(
       v.id as variation_id,
       v.name as variation_name,
       
-      COUNT(DISTINCT CASE WHEN e.event_type = 'view' THEN e.click_id END) as views,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'conversion' AND e.event_name = 'checkout_click' THEN e.click_id END) as checkouts,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'purchase' THEN e.click_id END) as purchases,
+      COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END) as views,
+      COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' AND e."eventName" = 'checkout_click' THEN e."clickId" END) as checkouts,
+      COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) as purchases,
       
-      COALESCE(SUM(CASE WHEN e.event_type = 'purchase' THEN e.event_value ELSE 0 END), 0) as revenue,
+      COALESCE(SUM(CASE WHEN e."eventType" = 'purchase' THEN e."eventValue" ELSE 0 END), 0) as revenue,
       
       ROUND(
-        COUNT(DISTINCT CASE WHEN e.event_type = 'conversion' AND e.event_name = 'checkout_click' THEN e.click_id END) * 100.0 / 
-        NULLIF(COUNT(DISTINCT CASE WHEN e.event_type = 'view' THEN e.click_id END), 0), 
+        COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' AND e."eventName" = 'checkout_click' THEN e."clickId" END) * 100.0 / 
+        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0), 
         2
       ) as checkout_rate,
       
       ROUND(
-        COUNT(DISTINCT CASE WHEN e.event_type = 'purchase' THEN e.click_id END) * 100.0 / 
-        NULLIF(COUNT(DISTINCT CASE WHEN e.event_type = 'view' THEN e.click_id END), 0), 
+        COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) * 100.0 / 
+        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0), 
         2
       ) as purchase_rate,
       
       ROUND(
-        COALESCE(SUM(CASE WHEN e.event_type = 'purchase' THEN e.event_value ELSE 0 END), 0) / 
-        NULLIF(COUNT(DISTINCT CASE WHEN e.event_type = 'purchase' THEN e.click_id END), 0),
+        COALESCE(SUM(CASE WHEN e."eventType" = 'purchase' THEN e."eventValue" ELSE 0 END), 0) / 
+        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END), 0),
         2
       ) as avg_order_value
       
-    FROM variations v
-    LEFT JOIN events e ON v.id = e.variation_id 
-      AND e.created_at >= ${startDate}::timestamp 
-      AND e.created_at <= ${endDate}::timestamp
-    WHERE v.campaign_id = ${campaignId}
+    FROM "Variation" v
+    LEFT JOIN "Event" e ON v.id = e."variationId" 
+      AND e."createdAt" >= ${startDate}::timestamp 
+      AND e."createdAt" <= ${endDate}::timestamp
+    WHERE v."campaignId" = ${campaignId}
     GROUP BY v.id, v.name
     ORDER BY revenue DESC
   `;
@@ -75,18 +75,18 @@ export async function GET(
   const funnelData = await db.$queryRaw`
     WITH funnel_steps AS (
       SELECT 
-        variation_id,
-        COUNT(DISTINCT CASE WHEN event_type = 'view' THEN click_id END) as step_views,
-        COUNT(DISTINCT CASE WHEN event_type = 'engagement' AND event_name = 'video_play' THEN click_id END) as step_video_play,
-        COUNT(DISTINCT CASE WHEN event_type = 'engagement' AND event_name = 'video_50' THEN click_id END) as step_video_50,
-        COUNT(DISTINCT CASE WHEN event_type = 'engagement' AND event_name = 'video_complete' THEN click_id END) as step_video_complete,
-        COUNT(DISTINCT CASE WHEN event_type = 'conversion' AND event_name = 'checkout_click' THEN click_id END) as step_checkout,
-        COUNT(DISTINCT CASE WHEN event_type = 'purchase' THEN click_id END) as step_purchase
-      FROM events
-      WHERE campaign_id = ${campaignId}
-        AND created_at >= ${startDate}::timestamp 
-        AND created_at <= ${endDate}::timestamp
-      GROUP BY variation_id
+        "variationId",
+        COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END) as step_views,
+        COUNT(DISTINCT CASE WHEN "eventType" = 'engagement' AND "eventName" = 'video_play' THEN "clickId" END) as step_video_play,
+        COUNT(DISTINCT CASE WHEN "eventType" = 'engagement' AND "eventName" = 'video_50' THEN "clickId" END) as step_video_50,
+        COUNT(DISTINCT CASE WHEN "eventType" = 'engagement' AND "eventName" = 'video_complete' THEN "clickId" END) as step_video_complete,
+        COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' AND "eventName" = 'checkout_click' THEN "clickId" END) as step_checkout,
+        COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as step_purchase
+      FROM "Event"
+      WHERE "campaignId" = ${campaignId}
+        AND "createdAt" >= ${startDate}::timestamp 
+        AND "createdAt" <= ${endDate}::timestamp
+      GROUP BY "variationId"
     )
     SELECT * FROM funnel_steps
   `;
@@ -94,17 +94,17 @@ export async function GET(
   // Buscar timeline (últimos 30 dias)
   const timeline = await db.$queryRaw`
     SELECT 
-      DATE(created_at) as date,
-      variation_id,
-      COUNT(DISTINCT CASE WHEN event_type = 'view' THEN click_id END) as views,
-      COUNT(DISTINCT CASE WHEN event_type = 'conversion' THEN click_id END) as conversions,
-      COUNT(DISTINCT CASE WHEN event_type = 'purchase' THEN click_id END) as purchases,
-      COALESCE(SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END), 0) as revenue
-    FROM events
-    WHERE campaign_id = ${campaignId}
-      AND created_at >= ${startDate}::timestamp 
-      AND created_at <= ${endDate}::timestamp
-    GROUP BY DATE(created_at), variation_id
+      DATE("createdAt") as date,
+      "variationId",
+      COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END) as views,
+      COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) as conversions,
+      COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as purchases,
+      COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) as revenue
+    FROM "Event"
+    WHERE "campaignId" = ${campaignId}
+      AND "createdAt" >= ${startDate}::timestamp 
+      AND "createdAt" <= ${endDate}::timestamp
+    GROUP BY DATE("createdAt"), "variationId"
     ORDER BY date ASC
   `;
 
