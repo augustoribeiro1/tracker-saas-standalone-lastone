@@ -66,6 +66,26 @@ export async function POST(request: NextRequest) {
               vercelDnsTarget = cnameRecord.value;
               console.log('[Domains API] DNS target obtido via checkDomainStatus:', vercelDnsTarget);
             }
+          } else {
+            // Fallback: Vercel não retorna verification para domínios já verificados
+            // Copiar DNS de outro domínio do mesmo usuário
+            console.log('[Domains API] verification não disponível, buscando DNS de outro domínio...');
+            
+            const domainWithDns = await db.customDomain.findFirst({
+              where: {
+                userId: parseInt(session.user.id),
+                vercelDnsTarget: {
+                  not: 'cname.vercel-dns.com'
+                }
+              }
+            });
+            
+            if (domainWithDns && domainWithDns.vercelDnsTarget) {
+              vercelDnsTarget = domainWithDns.vercelDnsTarget;
+              console.log('[Domains API] DNS copiado de:', domainWithDns.domain, '=', vercelDnsTarget);
+            } else {
+              console.log('[Domains API] Nenhum domínio com DNS específico encontrado');
+            }
           }
         } catch (statusError) {
           console.error('[Domains API] Erro ao buscar status:', statusError);

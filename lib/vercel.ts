@@ -87,7 +87,8 @@ export async function removeDomainFromVercel(domain: string) {
 }
 
 /**
- * Verifica status de um domínio no Vercel
+ * Verifica status de um domínio no Vercel e retorna DNS target
+ * Para domínios já verificados, busca nas configurações do projeto
  * @param domain - Domínio a ser verificado
  */
 export async function checkDomainStatus(domain: string) {
@@ -96,32 +97,81 @@ export async function checkDomainStatus(domain: string) {
   }
 
   try {
-    const url = VERCEL_TEAM_ID
+    // Primeiro tenta pegar info específica do domínio
+    const domainUrl = VERCEL_TEAM_ID
       ? `https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/domains/${domain}?teamId=${VERCEL_TEAM_ID}`
       : `https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/domains/${domain}`;
 
-    const response = await fetch(url, {
+    const domainResponse = await fetch(domainUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${VERCEL_TOKEN}`,
       }
     });
 
-    if (!response.ok) {
-      const data = await response.json();
+    if (!domainResponse.ok) {
+      const data = await domainResponse.json();
       return { exists: false, error: data.error?.message };
     }
 
-    const data = await response.json();
+    const domainData = await domainResponse.json();
     
+    // Se tiver verification, retorna
+    if (domainData.verification && Array.isArray(domainData.verification)) {
+      return {
+        exists: true,
+        verified: domainData.verified,
+        verification: domainData.verification,
+        configuredBy: domainData.configuredBy,
+        nameservers: domainData.nameservers,
+        intendedNameservers: domainData.intendedNameservers,
+      };
+    }
+    
+    // Se não tiver verification (domínio já verificado), busca na lista de domínios do projeto
+    // que tem informações mais completas
+    console.log('[checkDomainStatus] verification não disponível, buscando na lista de domínios...');
+    
+    const listUrl = VERCEL_TEAM_ID
+      ? `https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/domains?teamId=${VERCEL_TEAM_ID}`
+      : `https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/domains`;
+    
+    const listResponse = await fetch(listUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${VERCEL_TOKEN}`,
+      }
+    });
+    
+    if (listResponse.ok) {
+      const listData = await listResponse.json();
+      const foundDomain = listData.domains?.find((d: any) => d.name === domain);
+      
+      if (foundDomain) {
+        console.log('[checkDomainStatus] Domínio encontrado na lista:', JSON.stringify(foundDomain, null, 2));
+        
+        // Mesmo na lista, domínios verificados podem não ter verification
+        // Nesse caso, precisamos usar o padrão do Vercel DNS
+        if (foundDomain.verification) {
+          return {
+            exists: true,
+            verified: foundDomain.verified,
+            verification: foundDomain.verification,
+          };
+        }
+      }
+    }
+    
+    // Último recurso: retornar o que temos, mesmo sem verification
     return {
       exists: true,
-      verified: data.verified,
-      verification: data.verification,
-      configuredBy: data.configuredBy,
-      nameservers: data.nameservers,
-      intendedNameservers: data.intendedNameservers,
+      verified: domainData.verified,
+      verification: domainData.verification || null,
+      configuredBy: domainData.configuredBy,
+      nameservers: domainData.nameservers,
+      intendedNameservers: domainData.intendedNameservers,
     };
+    
   } catch (error: any) {
     console.error('Erro ao verificar domínio:', error);
     throw error;
