@@ -11,24 +11,55 @@ export async function GET(
 ) {
   const { slug } = params;
   const searchParams = request.nextUrl.searchParams;
+  const requestHost = request.headers.get('host') || '';
   
   try {
-    // 1. Buscar campanha
-    const campaign = await db.campaign.findFirst({
+    // 1. Buscar campanha pelo slug E domínio
+    // Primeiro tentar encontrar pelo domínio customizado
+    let campaign = await db.campaign.findFirst({
       where: { 
         slug,
-        status: 'active'
+        status: 'active',
+        customDomain: {
+          domain: requestHost
+        }
       },
       include: { 
         variations: { 
           orderBy: { id: 'asc' }
-        } 
+        },
+        customDomain: true
       }
     });
+    
+    // Se não encontrou com domínio customizado, buscar sem domínio
+    // (para URLs do tipo *.vercel.app)
+    if (!campaign) {
+      campaign = await db.campaign.findFirst({
+        where: { 
+          slug,
+          status: 'active',
+          customDomain: null
+        },
+        include: { 
+          variations: { 
+            orderBy: { id: 'asc' }
+          },
+          customDomain: true
+        }
+      });
+    }
     
     if (!campaign || campaign.variations.length === 0) {
       return new NextResponse('Campaign not found', { status: 404 });
     }
+    
+    console.log('[Redirect] Campaign found:', { 
+      slug, 
+      campaignId: campaign.id, 
+      domain: campaign.customDomain?.domain || 'default',
+      requestHost 
+    });
     
     // 2. Verificar utm_term existente (visitante retornando)
     const existingUtmTerm = searchParams.get('utm_term');

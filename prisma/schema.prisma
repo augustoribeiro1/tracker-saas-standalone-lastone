@@ -72,7 +72,7 @@ model Campaign {
   id             Int      @id @default(autoincrement())
   userId         Int
   name           String
-  slug           String   @unique
+  slug           String
   status         String   @default("active")
   customDomainId Int?     // Domínio selecionado para esta campanha
   createdAt      DateTime @default(now())
@@ -83,6 +83,7 @@ model Campaign {
   variations   Variation[]
   events       Event[]
   
+  @@unique([userId, slug])  // Slug único por USUÁRIO
   @@index([customDomainId])
 }
 
