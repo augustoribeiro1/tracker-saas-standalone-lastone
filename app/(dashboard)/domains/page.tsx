@@ -61,6 +61,20 @@ export default function DomainsPage() {
     fetchDomains();
   };
 
+  const fixOldDomains = async () => {
+    if (!confirm('Isso vai buscar o DNS correto de todos os domínios antigos. Continuar?')) return;
+    
+    const res = await fetch('/api/domains/fix-dns');
+    const data = await res.json();
+    
+    if (data.updated > 0) {
+      alert(`✅ ${data.updated} domínio(s) corrigido(s)!`);
+      fetchDomains();
+    } else {
+      alert(data.message || 'Nenhum domínio precisava ser corrigido');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -82,7 +96,15 @@ export default function DomainsPage() {
 
       {/* Adicionar Domínio */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Adicionar Novo Domínio</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-medium text-gray-900">Adicionar Novo Domínio</h2>
+          <button
+            onClick={fixOldDomains}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            🔧 Corrigir DNS de domínios antigos
+          </button>
+        </div>
         <form onSubmit={addDomain} className="flex gap-4">
           <input
             type="text"
