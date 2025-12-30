@@ -58,7 +58,7 @@ export default function WebhooksPage() {
 
       {/* Plataformas Disponíveis */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium mb-4">Adicionar Novo Webhook</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Adicionar Novo Webhook</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.values(WEBHOOK_PLATFORMS).map((platform) => (
             <button

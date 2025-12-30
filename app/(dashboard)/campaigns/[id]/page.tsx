@@ -105,7 +105,7 @@ export default function CampaignAnalyticsPage() {
 
       {/* Comparação de Variações */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium mb-4">Comparação de Variações</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Comparação de Variações</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
@@ -155,7 +155,7 @@ export default function CampaignAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Timeline */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium mb-4">Performance ao Longo do Tempo</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Performance ao Longo do Tempo</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data.timeline}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -172,7 +172,7 @@ export default function CampaignAnalyticsPage() {
 
         {/* Distribuição de Views por Variação */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium mb-4">Distribuição de Tráfego</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Distribuição de Tráfego</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -197,7 +197,7 @@ export default function CampaignAnalyticsPage() {
 
       {/* Funil de Conversão */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium mb-4">Funil de Conversão</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Funil de Conversão</h2>
         <div className="space-y-4">
           {data.metrics.map((metric: any) => {
             const views = parseInt(metric.views || 0);

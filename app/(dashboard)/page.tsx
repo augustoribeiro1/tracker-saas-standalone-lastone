@@ -139,7 +139,7 @@ export default function DashboardPage() {
 
       {stats?.timeline && stats.timeline.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium mb-4">Performance - Últimos 30 Dias</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Performance - Últimos 30 Dias</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={stats.timeline}>
               <CartesianGrid strokeDasharray="3 3" />

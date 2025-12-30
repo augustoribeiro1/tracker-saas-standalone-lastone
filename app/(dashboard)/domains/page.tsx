@@ -82,14 +82,14 @@ export default function DomainsPage() {
 
       {/* Adicionar Domínio */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium mb-4">Adicionar Novo Domínio</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Adicionar Novo Domínio</h2>
         <form onSubmit={addDomain} className="flex gap-4">
           <input
             type="text"
             value={newDomain}
             onChange={(e) => setNewDomain(e.target.value)}
             placeholder="track.seusite.com"
-            className="flex-1 rounded-md border-gray-300 shadow-sm"
+            className="flex-1 rounded-md border-2 border-gray-300 shadow-sm px-3 py-2 bg-white text-gray-900"
             required
           />
           <Button type="submit">Adicionar</Button>
@@ -181,15 +181,15 @@ export default function DomainsPage() {
                 <h4 className="font-medium text-sm mb-3">📋 Configuração DNS:</h4>
                 <div className="space-y-2 text-sm">
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium">Tipo:</div>
+                    <div className="font-medium text-gray-900">Tipo:</div>
                     <div><code className="bg-white px-2 py-1 rounded">CNAME</code></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium">Nome:</div>
+                    <div className="font-medium text-gray-900">Nome:</div>
                     <div><code className="bg-white px-2 py-1 rounded">{showInstructions.domain}</code></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium">Valor:</div>
+                    <div className="font-medium text-gray-900">Valor:</div>
                     <div><code className="bg-white px-2 py-1 rounded">cname.vercel-dns.com</code></div>
                   </div>
                 </div>
