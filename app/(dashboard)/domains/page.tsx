@@ -214,7 +214,7 @@ export default function DomainsPage() {
                     <div className="font-medium text-gray-900">Valor:</div>
                     <div>
                       <code className="bg-white px-2 py-1 rounded">
-                        {showInstructions.vercelDnsTarget || 'cname.vercel-dns.com'}
+                        cname.vercel-dns.com
                       </code>
                     </div>
                   </div>

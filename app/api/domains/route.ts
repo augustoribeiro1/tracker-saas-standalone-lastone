@@ -37,119 +37,23 @@ export async function POST(request: NextRequest) {
 
   try {
     // 1. Adicionar domínio ao Vercel AUTOMATICAMENTE via API
-    const { addDomainToVercel, checkDomainStatus } = await import('@/lib/vercel');
+    const { addDomainToVercel } = await import('@/lib/vercel');
     
     console.log(`[Domains API] Adicionando domínio ${domain} ao Vercel...`);
     
     const vercelResult = await addDomainToVercel(domain);
     
-    console.log(`[Domains API] Domínio ${domain} adicionado ao Vercel:`, JSON.stringify(vercelResult, null, 2));
+    console.log(`[Domains API] Domínio ${domain} adicionado ao Vercel com sucesso!`);
 
-    // Extrair o DNS target correto da resposta
-    let vercelDnsTarget = 'cname.vercel-dns.com'; // Fallback
-    
-    if (vercelResult.domain) {
-      console.log('[Domains API] Estrutura do domain:', JSON.stringify(vercelResult.domain, null, 2));
-      
-      // Se domínio JÁ ESTÁ verificado, não tem verification
-      // Precisa buscar via checkDomainStatus
-      if (vercelResult.domain.verified) {
-        console.log('[Domains API] Domínio já verificado, buscando DNS via checkDomainStatus...');
-        
-        try {
-          const status = await checkDomainStatus(domain);
-          console.log('[Domains API] Status do domínio:', JSON.stringify(status, null, 2));
-          
-          if (status.exists && status.verification && Array.isArray(status.verification)) {
-            const cnameRecord = status.verification.find((v: any) => v.type === 'CNAME');
-            if (cnameRecord && cnameRecord.value) {
-              vercelDnsTarget = cnameRecord.value;
-              console.log('[Domains API] DNS target obtido via checkDomainStatus:', vercelDnsTarget);
-            }
-          } else {
-            // Fallback: Vercel não retorna verification para domínios já verificados
-            // Copiar DNS de outro domínio do mesmo usuário
-            console.log('[Domains API] verification não disponível, buscando DNS de outro domínio...');
-            
-            const domainWithDns = await db.customDomain.findFirst({
-              where: {
-                userId: parseInt(session.user.id),
-                vercelDnsTarget: {
-                  not: 'cname.vercel-dns.com'
-                }
-              }
-            });
-            
-            if (domainWithDns && domainWithDns.vercelDnsTarget) {
-              vercelDnsTarget = domainWithDns.vercelDnsTarget;
-              console.log('[Domains API] DNS copiado de:', domainWithDns.domain, '=', vercelDnsTarget);
-            } else {
-              console.log('[Domains API] Nenhum domínio com DNS específico encontrado');
-            }
-          }
-        } catch (statusError) {
-          console.error('[Domains API] Erro ao buscar status:', statusError);
-        }
-      } else {
-        // Domínio NOVO - tem verification na resposta
-        if (vercelResult.domain.verification && Array.isArray(vercelResult.domain.verification)) {
-          const cnameRecord = vercelResult.domain.verification.find((v: any) => v.type === 'CNAME');
-          if (cnameRecord && cnameRecord.value) {
-            vercelDnsTarget = cnameRecord.value;
-            console.log('[Domains API] DNS target extraído do verification:', vercelDnsTarget);
-          } else {
-            console.log('[Domains API] CNAME record não encontrado no verification (só TXT)');
-            
-            // Fallback: Copiar de outro domínio
-            console.log('[Domains API] Buscando DNS de outro domínio...');
-            
-            const domainWithDns = await db.customDomain.findFirst({
-              where: {
-                userId: parseInt(session.user.id),
-                vercelDnsTarget: {
-                  not: 'cname.vercel-dns.com'
-                }
-              }
-            });
-            
-            if (domainWithDns && domainWithDns.vercelDnsTarget) {
-              vercelDnsTarget = domainWithDns.vercelDnsTarget;
-              console.log('[Domains API] DNS copiado de:', domainWithDns.domain, '=', vercelDnsTarget);
-            } else {
-              console.log('[Domains API] Nenhum domínio com DNS específico encontrado');
-            }
-          }
-        } else {
-          console.log('[Domains API] verification não existe ou não é array');
-          
-          // Fallback: Copiar de outro domínio
-          console.log('[Domains API] Buscando DNS de outro domínio...');
-          
-          const domainWithDns = await db.customDomain.findFirst({
-            where: {
-              userId: parseInt(session.user.id),
-              vercelDnsTarget: {
-                not: 'cname.vercel-dns.com'
-              }
-            }
-          });
-          
-          if (domainWithDns && domainWithDns.vercelDnsTarget) {
-            vercelDnsTarget = domainWithDns.vercelDnsTarget;
-            console.log('[Domains API] DNS copiado de:', domainWithDns.domain, '=', vercelDnsTarget);
-          } else {
-            console.log('[Domains API] Nenhum domínio com DNS específico encontrado');
-          }
-        }
-      }
-    }
+    // 2. Usar DNS genérico da Vercel (funciona perfeitamente!)
+    const vercelDnsTarget = 'cname.vercel-dns.com';
 
-    // 2. Salvar no banco
+    // 3. Salvar no banco
     const newDomain = await db.customDomain.create({
       data: {
         userId: parseInt(session.user.id),
         domain,
-        status: 'verifying',
+        status: 'pending',
         vercelConfigured: true,
         vercelDnsTarget: vercelDnsTarget
       }
@@ -157,35 +61,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       domain: newDomain,
-      message: 'Domínio adicionado ao Vercel automaticamente!',
-      dnsTarget: vercelDnsTarget,
-      debug: {
-        vercelResponse: vercelResult
-      }
+      message: 'Domínio adicionado ao Vercel! Configure o CNAME para: cname.vercel-dns.com',
+      dnsTarget: vercelDnsTarget
     });
 
   } catch (error: any) {
     console.error('[Domains API] Erro ao adicionar domínio:', error);
-    
-    // Tentar buscar DNS via checkDomainStatus se o domínio já existe
-    let vercelDnsTarget = 'cname.vercel-dns.com';
-    
-    try {
-      const { checkDomainStatus } = await import('@/lib/vercel');
-      const status = await checkDomainStatus(domain);
-      
-      console.log('[Domains API] Status do domínio:', JSON.stringify(status, null, 2));
-      
-      if (status.exists && status.verification && Array.isArray(status.verification)) {
-        const cnameRecord = status.verification.find((v: any) => v.type === 'CNAME');
-        if (cnameRecord && cnameRecord.value) {
-          vercelDnsTarget = cnameRecord.value;
-          console.log('[Domains API] DNS obtido via checkDomainStatus:', vercelDnsTarget);
-        }
-      }
-    } catch (statusError) {
-      console.error('[Domains API] Erro ao buscar status:', statusError);
-    }
     
     // Salvar no banco mesmo se Vercel falhar
     const newDomain = await db.customDomain.create({
@@ -194,15 +75,15 @@ export async function POST(request: NextRequest) {
         domain,
         status: 'pending',
         vercelConfigured: false,
-        vercelDnsTarget: vercelDnsTarget
+        vercelDnsTarget: 'cname.vercel-dns.com'
       }
     });
 
     return NextResponse.json({ 
       domain: newDomain,
-      warning: 'Domínio salvo, mas erro ao adicionar no Vercel.',
+      warning: 'Domínio salvo. Configure manualmente no Vercel se necessário.',
       error: error.message,
-      dnsTarget: vercelDnsTarget
+      dnsTarget: 'cname.vercel-dns.com'
     }, { status: 207 });
   }
 }
