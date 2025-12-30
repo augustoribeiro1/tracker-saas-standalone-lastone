@@ -3,6 +3,29 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 
+// Helper para converter BigInt em Number (PostgreSQL retorna BigInt em COUNT/SUM)
+function convertBigIntToNumber(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  
+  if (typeof obj === 'bigint') {
+    return Number(obj);
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToNumber);
+  }
+  
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const key in obj) {
+      converted[key] = convertBigIntToNumber(obj[key]);
+    }
+    return converted;
+  }
+  
+  return obj;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -33,7 +56,7 @@ export async function GET(
   }
 
   // Buscar métricas por variação
-  const metrics = await db.$queryRaw`
+  const metricsRaw = await db.$queryRaw`
     SELECT 
       v.id as variation_id,
       v.name as variation_name,
@@ -70,9 +93,12 @@ export async function GET(
     GROUP BY v.id, v.name
     ORDER BY revenue DESC
   `;
+  
+  // Converter BigInt para Number
+  const metrics = convertBigIntToNumber(metricsRaw);
 
   // Buscar dados do funil
-  const funnelData = await db.$queryRaw`
+  const funnelDataRaw = await db.$queryRaw`
     WITH funnel_steps AS (
       SELECT 
         "variationId",
@@ -90,9 +116,12 @@ export async function GET(
     )
     SELECT * FROM funnel_steps
   `;
+  
+  // Converter BigInt para Number
+  const funnelData = convertBigIntToNumber(funnelDataRaw);
 
   // Buscar timeline (últimos 30 dias)
-  const timeline = await db.$queryRaw`
+  const timelineRaw = await db.$queryRaw`
     SELECT 
       DATE("createdAt") as date,
       "variationId",
@@ -107,6 +136,9 @@ export async function GET(
     GROUP BY DATE("createdAt"), "variationId"
     ORDER BY date ASC
   `;
+  
+  // Converter BigInt para Number
+  const timeline = convertBigIntToNumber(timelineRaw);
 
   return NextResponse.json({
     campaign,

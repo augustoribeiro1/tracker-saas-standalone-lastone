@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
       include: {
         variations: {
           orderBy: { id: 'asc' }
-        }
+        },
+        customDomain: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, variations } = body;
+    const { name, slug, variations, customDomainId } = body;
 
     // Validações
     if (!name || !slug || !variations || variations.length < 2) {
@@ -66,6 +67,23 @@ export async function POST(request: NextRequest) {
         { error: 'Nome, slug e pelo menos 2 variações são obrigatórios' },
         { status: 400 }
       );
+    }
+
+    // Validar domínio se fornecido
+    if (customDomainId) {
+      const domainExists = await db.customDomain.findFirst({
+        where: {
+          id: parseInt(customDomainId),
+          userId: user.id
+        }
+      });
+
+      if (!domainExists) {
+        return NextResponse.json(
+          { error: 'Domínio selecionado não pertence a você' },
+          { status: 400 }
+        );
+      }
     }
 
     // Verificar se slug já existe
@@ -87,17 +105,18 @@ export async function POST(request: NextRequest) {
         slug: slug.toLowerCase(),
         userId: user.id,
         status: 'active',
+        customDomainId: customDomainId ? parseInt(customDomainId) : null,
         variations: {
           create: variations.map((v: any) => ({
             name: v.name,
             destinationUrl: v.destinationUrl,
             weight: v.weight || 50
-            // isControl removido - campo não existe no schema
           }))
         }
       },
       include: {
-        variations: true
+        variations: true,
+        customDomain: true
       }
     });
 

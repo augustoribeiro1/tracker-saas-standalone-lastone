@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
@@ -7,18 +7,51 @@ export default function NewCampaignPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [domains, setDomains] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
+    customDomainId: '',
     variations: [
       { name: 'Variação A', destinationUrl: '', weight: 50 },
       { name: 'Variação B', destinationUrl: '', weight: 50 }
     ]
   });
 
+  // Carregar domínios do usuário
+  useEffect(() => {
+    fetch('/api/domains')
+      .then(r => r.json())
+      .then(data => {
+        setDomains(data.domains || []);
+        // Selecionar primeiro domínio automaticamente se houver
+        if (data.domains && data.domains.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            customDomainId: data.domains[0].id.toString()
+          }));
+        }
+      })
+      .catch(err => console.error('Erro ao carregar domínios:', err));
+  }, []);
+
   // Calcular soma total de weights
   const totalWeight = formData.variations.reduce((sum, v) => sum + (v.weight || 0), 0);
   const isWeightValid = totalWeight === 100;
+
+  // Gerar URL completo
+  const selectedDomain = domains.find(d => d.id.toString() === formData.customDomainId);
+  const fullUrl = selectedDomain && formData.slug
+    ? `https://${selectedDomain.domain}/r/${formData.slug}`
+    : '';
+
+  // Copiar URL para clipboard
+  const copyUrl = () => {
+    if (fullUrl) {
+      navigator.clipboard.writeText(fullUrl);
+      alert('URL copiado para área de transferência!');
+    }
+  };
 
   // Função para adicionar https:// se não tiver protocolo
   const normalizeUrl = (url: string) => {
@@ -107,10 +140,64 @@ export default function NewCampaignPage() {
             className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
             placeholder="black-friday"
           />
-          <p className="mt-1 text-sm text-gray-500">
-            URL será: /r/{formData.slug || 'seu-slug'}
-          </p>
         </div>
+
+        {/* NOVO: Seletor de Domínio */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Domínio</label>
+          {domains.length === 0 ? (
+            <div className="rounded-md bg-yellow-50 p-4">
+              <p className="text-sm text-yellow-800">
+                Você precisa adicionar um domínio customizado primeiro.{' '}
+                <a href="/domains" className="font-medium underline">
+                  Adicionar Domínio
+                </a>
+              </p>
+            </div>
+          ) : (
+            <select
+              required
+              value={formData.customDomainId}
+              onChange={e => setFormData({...formData, customDomainId: e.target.value})}
+              className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+            >
+              <option value="">Selecione um domínio</option>
+              {domains.map(domain => (
+                <option key={domain.id} value={domain.id}>
+                  {domain.domain}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* NOVO: URL Completo com botão Copiar */}
+        {fullUrl && (
+          <div className="rounded-lg bg-blue-50 p-4 border-2 border-blue-200">
+            <label className="block text-sm font-medium text-blue-900 mb-2">
+              🔗 URL da Campanha (copie e cole nos seus anúncios):
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={fullUrl}
+                className="flex-1 rounded-md border-2 border-blue-300 bg-white px-3 py-2 text-gray-900 font-mono text-sm"
+              />
+              <Button
+                type="button"
+                onClick={copyUrl}
+                variant="outline"
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                📋 Copiar
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-blue-700">
+              Use esta URL nos seus anúncios do Meta Ads, Google Ads, TikTok Ads, etc.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
