@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateClickId, parseTrackingCode, generateTrackingCode } from '@/types';
 
-export const runtime = 'edge';
+// Removido: export const runtime = 'edge'; 
+// Prisma não funciona no Edge Runtime, então usamos Node.js runtime
 
 export async function GET(
   request: NextRequest,
@@ -13,8 +14,11 @@ export async function GET(
   
   try {
     // 1. Buscar campanha
-    const campaign = await db.campaign.findUnique({
-      where: { slug, status: 'active' },
+    const campaign = await db.campaign.findFirst({
+      where: { 
+        slug,
+        status: 'active'
+      },
       include: { 
         variations: { 
           orderBy: { id: 'asc' }
@@ -46,7 +50,8 @@ export async function GET(
       variationId = variation.id;
       
       // Registrar view (fire and forget)
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/track`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || request.nextUrl.origin;
+      fetch(`${apiUrl}/api/events/track`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
