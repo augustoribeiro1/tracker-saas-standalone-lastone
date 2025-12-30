@@ -49,24 +49,30 @@ export async function GET(
       const variation = selectVariation(campaign.variations);
       variationId = variation.id;
       
-      // Registrar view (fire and forget)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || request.nextUrl.origin;
-      fetch(`${apiUrl}/api/events/track`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: 'view',
-          clickId,
-          campaignId: campaign.id,
-          variationId,
-          utmSource: searchParams.get('utm_source'),
-          utmMedium: searchParams.get('utm_medium'),
-          utmCampaign: searchParams.get('utm_campaign'),
-          utmContent: searchParams.get('utm_content'),
-          ipAddress: request.headers.get('x-forwarded-for'),
-          userAgent: request.headers.get('user-agent')
-        })
-      }).catch(console.error);
+      // Registrar view DIRETAMENTE no banco
+      try {
+        await db.event.create({
+          data: {
+            clickId,
+            campaignId: campaign.id,
+            variationId,
+            eventType: 'view',
+            eventName: null,
+            eventValue: null,
+            ipAddress: request.headers.get('x-forwarded-for'),
+            userAgent: request.headers.get('user-agent'),
+            referer: request.headers.get('referer'),
+            utmSource: searchParams.get('utm_source'),
+            utmMedium: searchParams.get('utm_medium'),
+            utmCampaign: searchParams.get('utm_campaign'),
+            utmTerm: searchParams.get('utm_term'),
+            utmContent: searchParams.get('utm_content'),
+          }
+        });
+        console.log('[Redirect] Event created:', { clickId, campaignId: campaign.id, variationId });
+      } catch (eventError) {
+        console.error('[Redirect] Failed to create event:', eventError);
+      }
     }
     
     // 4. Buscar URL de destino
