@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // 1. Adicionar domínio ao Vercel AUTOMATICAMENTE via API
-    const { addDomainToVercel } = await import('@/lib/vercel');
+    const { addDomainToVercel, checkDomainStatus } = await import('@/lib/vercel');
     
     console.log(`[Domains API] Adicionando domínio ${domain} ao Vercel...`);
     
@@ -46,23 +46,43 @@ export async function POST(request: NextRequest) {
     console.log(`[Domains API] Domínio ${domain} adicionado ao Vercel:`, JSON.stringify(vercelResult, null, 2));
 
     // Extrair o DNS target correto da resposta
-    // A Vercel retorna: { success: true, domain: { name, verification: [...] } }
     let vercelDnsTarget = 'cname.vercel-dns.com'; // Fallback
     
     if (vercelResult.domain) {
       console.log('[Domains API] Estrutura do domain:', JSON.stringify(vercelResult.domain, null, 2));
       
-      // Tentar acessar verification
-      if (vercelResult.domain.verification && Array.isArray(vercelResult.domain.verification)) {
-        const cnameRecord = vercelResult.domain.verification.find((v: any) => v.type === 'CNAME');
-        if (cnameRecord && cnameRecord.value) {
-          vercelDnsTarget = cnameRecord.value;
-          console.log('[Domains API] DNS target extraído:', vercelDnsTarget);
-        } else {
-          console.log('[Domains API] CNAME record não encontrado no verification');
+      // Se domínio JÁ ESTÁ verificado, não tem verification
+      // Precisa buscar via checkDomainStatus
+      if (vercelResult.domain.verified) {
+        console.log('[Domains API] Domínio já verificado, buscando DNS via checkDomainStatus...');
+        
+        try {
+          const status = await checkDomainStatus(domain);
+          console.log('[Domains API] Status do domínio:', JSON.stringify(status, null, 2));
+          
+          if (status.exists && status.verification && Array.isArray(status.verification)) {
+            const cnameRecord = status.verification.find((v: any) => v.type === 'CNAME');
+            if (cnameRecord && cnameRecord.value) {
+              vercelDnsTarget = cnameRecord.value;
+              console.log('[Domains API] DNS target obtido via checkDomainStatus:', vercelDnsTarget);
+            }
+          }
+        } catch (statusError) {
+          console.error('[Domains API] Erro ao buscar status:', statusError);
         }
       } else {
-        console.log('[Domains API] verification não existe ou não é array');
+        // Domínio NOVO - tem verification na resposta
+        if (vercelResult.domain.verification && Array.isArray(vercelResult.domain.verification)) {
+          const cnameRecord = vercelResult.domain.verification.find((v: any) => v.type === 'CNAME');
+          if (cnameRecord && cnameRecord.value) {
+            vercelDnsTarget = cnameRecord.value;
+            console.log('[Domains API] DNS target extraído do verification:', vercelDnsTarget);
+          } else {
+            console.log('[Domains API] CNAME record não encontrado no verification');
+          }
+        } else {
+          console.log('[Domains API] verification não existe ou não é array');
+        }
       }
     }
 
