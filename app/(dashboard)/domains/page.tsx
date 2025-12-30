@@ -190,7 +190,11 @@ export default function DomainsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="font-medium text-gray-900">Valor:</div>
-                    <div><code className="bg-white px-2 py-1 rounded">cname.vercel-dns.com</code></div>
+                    <div>
+                      <code className="bg-white px-2 py-1 rounded">
+                        {showInstructions.vercelDnsTarget || 'cname.vercel-dns.com'}
+                      </code>
+                    </div>
                   </div>
                 </div>
               </div>

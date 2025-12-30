@@ -45,19 +45,24 @@ export async function POST(request: NextRequest) {
     
     console.log(`[Domains API] Domínio ${domain} adicionado ao Vercel:`, vercelResult);
 
+    // Extrair o DNS target correto da resposta
+    const vercelDnsTarget = vercelResult.domain?.verification?.[0]?.value || 'cname.vercel-dns.com';
+
     // 2. Salvar no banco
     const newDomain = await db.customDomain.create({
       data: {
         userId: parseInt(session.user.id),
         domain,
         status: 'verifying', // Vercel vai verificar DNS automaticamente
-        vercelConfigured: true
+        vercelConfigured: true,
+        vercelDnsTarget: vercelDnsTarget // Salvar o valor correto!
       }
     });
 
     return NextResponse.json({ 
       domain: newDomain,
-      message: 'Domínio adicionado ao Vercel automaticamente! Configure o DNS e aguarde verificação.'
+      message: 'Domínio adicionado ao Vercel automaticamente! Configure o DNS e aguarde verificação.',
+      dnsTarget: vercelDnsTarget
     });
 
   } catch (error: any) {
@@ -69,7 +74,8 @@ export async function POST(request: NextRequest) {
         userId: parseInt(session.user.id),
         domain,
         status: 'pending',
-        vercelConfigured: false
+        vercelConfigured: false,
+        vercelDnsTarget: 'cname.vercel-dns.com' // Fallback
       }
     });
 
