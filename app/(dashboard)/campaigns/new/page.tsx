@@ -11,8 +11,8 @@ export default function NewCampaignPage() {
     name: '',
     slug: '',
     variations: [
-      { name: 'Variação A', destinationUrl: '', weight: 50, isControl: true },
-      { name: 'Variação B', destinationUrl: '', weight: 50, isControl: false }
+      { name: 'Variação A', destinationUrl: '', weight: 50 },
+      { name: 'Variação B', destinationUrl: '', weight: 50 }
     ]
   });
 

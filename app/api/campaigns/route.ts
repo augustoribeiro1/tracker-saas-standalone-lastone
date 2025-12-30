@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
           create: variations.map((v: any) => ({
             name: v.name,
             destinationUrl: v.destinationUrl,
-            weight: v.weight || 50,
-            isControl: v.isControl || false
+            weight: v.weight || 50
+            // isControl removido - campo não existe no schema
           }))
         }
       },
