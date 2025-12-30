@@ -40,11 +40,13 @@ export async function GET(
       if (trackingData && trackingData.testId === campaign.id) {
         clickId = trackingData.clickId;
         selectedVariationId = trackingData.variationId;
+        console.log('[Redirect] Returning visitor:', { clickId, variationId: selectedVariationId, utm_term: existingUtmTerm });
       } else {
         // utm_term inválido, tratar como novo visitante
         clickId = generateClickId();
         const variation = selectVariation(campaign.variations);
         selectedVariationId = variation.id;
+        console.log('[Redirect] New visitor (invalid utm_term):', { clickId, variationId: selectedVariationId, selectedName: variation.name, weights: campaign.variations.map((v: any) => ({ name: v.name, weight: v.weight })) });
         
         // Registrar view
         await createViewEvent(campaign.id, selectedVariationId, clickId, request, searchParams);
@@ -54,6 +56,7 @@ export async function GET(
       clickId = generateClickId();
       const variation = selectVariation(campaign.variations);
       selectedVariationId = variation.id;
+      console.log('[Redirect] New visitor:', { clickId, variationId: selectedVariationId, selectedName: variation.name, weights: campaign.variations.map((v: any) => ({ name: v.name, weight: v.weight })) });
       
       // Registrar view
       await createViewEvent(campaign.id, selectedVariationId, clickId, request, searchParams);
