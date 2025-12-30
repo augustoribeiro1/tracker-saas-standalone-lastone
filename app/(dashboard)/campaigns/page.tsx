@@ -22,7 +22,7 @@ export default function CampaignsPage() {
     <div className="px-4 sm:px-6 lg:px-8">
       <div className="sm:flex sm:items-center mb-6">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold">Campanhas</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Campanhas</h1>
         </div>
         <Link href="/campaigns/new">
           <Button>Nova Campanha</Button>

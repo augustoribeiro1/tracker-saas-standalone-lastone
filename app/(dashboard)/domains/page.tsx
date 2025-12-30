@@ -124,7 +124,7 @@ export default function DomainsPage() {
       {/* Lista de Domínios */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium">Domínios Configurados</h2>
+          <h2 className="text-lg font-medium text-gray-900">Domínios Configurados</h2>
         </div>
 
         {loading ? (
@@ -195,25 +195,25 @@ export default function DomainsPage() {
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium">Configurar DNS - {showInstructions.domain}</h3>
+              <h3 className="text-lg font-medium text-gray-900">Configurar DNS - {showInstructions.domain}</h3>
             </div>
 
             <div className="p-6 space-y-4">
               <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-sm mb-3">📋 Configuração DNS:</h4>
+                <h4 className="font-medium text-sm mb-3 text-gray-900">📋 Configuração DNS:</h4>
                 <div className="space-y-2 text-sm">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="font-medium text-gray-900">Tipo:</div>
-                    <div><code className="bg-white px-2 py-1 rounded">CNAME</code></div>
+                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">CNAME</code></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="font-medium text-gray-900">Nome:</div>
-                    <div><code className="bg-white px-2 py-1 rounded">{showInstructions.domain}</code></div>
+                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">{showInstructions.domain}</code></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="font-medium text-gray-900">Valor:</div>
                     <div>
-                      <code className="bg-white px-2 py-1 rounded">
+                      <code className="bg-white px-2 py-1 rounded text-gray-900">
                         cname.vercel-dns.com
                       </code>
                     </div>

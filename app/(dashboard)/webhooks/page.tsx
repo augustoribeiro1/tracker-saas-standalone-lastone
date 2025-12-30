@@ -107,7 +107,7 @@ export default function WebhooksPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900">
                       {webhook.webhookUrl.substring(0, 50)}...
                     </code>
                   </td>
@@ -150,7 +150,7 @@ export default function WebhooksPage() {
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium">Configurar Webhook - {newWebhook.platform}</h3>
+              <h3 className="text-lg font-medium text-gray-900">Configurar Webhook - {newWebhook.platform}</h3>
             </div>
 
             <div className="p-6 space-y-4">
@@ -164,7 +164,7 @@ export default function WebhooksPage() {
                     type="text"
                     value={newWebhook.webhookUrl}
                     readOnly
-                    className="flex-1 rounded-md border-gray-300 bg-gray-50 text-sm font-mono"
+                    className="flex-1 rounded-md border-gray-300 bg-gray-50 text-sm font-mono text-gray-900"
                   />
                   <Button
                     size="sm"
@@ -186,7 +186,7 @@ export default function WebhooksPage() {
                       type="text"
                       value={newWebhook.webhookSecret}
                       readOnly
-                      className="flex-1 rounded-md border-gray-300 bg-gray-50 text-sm font-mono"
+                      className="flex-1 rounded-md border-gray-300 bg-gray-50 text-sm font-mono text-gray-900"
                     />
                     <Button
                       size="sm"
