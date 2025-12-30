@@ -98,10 +98,48 @@ export async function POST(request: NextRequest) {
             vercelDnsTarget = cnameRecord.value;
             console.log('[Domains API] DNS target extraído do verification:', vercelDnsTarget);
           } else {
-            console.log('[Domains API] CNAME record não encontrado no verification');
+            console.log('[Domains API] CNAME record não encontrado no verification (só TXT)');
+            
+            // Fallback: Copiar de outro domínio
+            console.log('[Domains API] Buscando DNS de outro domínio...');
+            
+            const domainWithDns = await db.customDomain.findFirst({
+              where: {
+                userId: parseInt(session.user.id),
+                vercelDnsTarget: {
+                  not: 'cname.vercel-dns.com'
+                }
+              }
+            });
+            
+            if (domainWithDns && domainWithDns.vercelDnsTarget) {
+              vercelDnsTarget = domainWithDns.vercelDnsTarget;
+              console.log('[Domains API] DNS copiado de:', domainWithDns.domain, '=', vercelDnsTarget);
+            } else {
+              console.log('[Domains API] Nenhum domínio com DNS específico encontrado');
+            }
           }
         } else {
           console.log('[Domains API] verification não existe ou não é array');
+          
+          // Fallback: Copiar de outro domínio
+          console.log('[Domains API] Buscando DNS de outro domínio...');
+          
+          const domainWithDns = await db.customDomain.findFirst({
+            where: {
+              userId: parseInt(session.user.id),
+              vercelDnsTarget: {
+                not: 'cname.vercel-dns.com'
+              }
+            }
+          });
+          
+          if (domainWithDns && domainWithDns.vercelDnsTarget) {
+            vercelDnsTarget = domainWithDns.vercelDnsTarget;
+            console.log('[Domains API] DNS copiado de:', domainWithDns.domain, '=', vercelDnsTarget);
+          } else {
+            console.log('[Domains API] Nenhum domínio com DNS específico encontrado');
+          }
         }
       }
     }
