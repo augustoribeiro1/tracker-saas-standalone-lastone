@@ -32,51 +32,35 @@ export async function GET(
     
     // 2. Verificar utm_term existente (visitante retornando)
     const existingUtmTerm = searchParams.get('utm_term');
-    let clickId: string | undefined;
-    let variationId: number | undefined;
+    let clickId: string;
+    let selectedVariationId: number;
     
     if (existingUtmTerm) {
       const trackingData = parseTrackingCode(existingUtmTerm);
       if (trackingData && trackingData.testId === campaign.id) {
         clickId = trackingData.clickId;
-        variationId = trackingData.variationId;
+        selectedVariationId = trackingData.variationId;
+      } else {
+        // utm_term inválido, tratar como novo visitante
+        clickId = generateClickId();
+        const variation = selectVariation(campaign.variations);
+        selectedVariationId = variation.id;
+        
+        // Registrar view
+        await createViewEvent(campaign.id, selectedVariationId, clickId, request, searchParams);
       }
-    }
-    
-    // 3. Novo visitante - selecionar variação
-    if (!clickId) {
+    } else {
+      // Novo visitante
       clickId = generateClickId();
       const variation = selectVariation(campaign.variations);
-      variationId = variation.id;
+      selectedVariationId = variation.id;
       
-      // Registrar view DIRETAMENTE no banco
-      try {
-        await db.event.create({
-          data: {
-            clickId,
-            campaignId: campaign.id,
-            variationId,
-            eventType: 'view',
-            eventName: null,
-            eventValue: null,
-            ipAddress: request.headers.get('x-forwarded-for'),
-            userAgent: request.headers.get('user-agent'),
-            referer: request.headers.get('referer'),
-            utmSource: searchParams.get('utm_source'),
-            utmMedium: searchParams.get('utm_medium'),
-            utmCampaign: searchParams.get('utm_campaign'),
-            utmTerm: searchParams.get('utm_term'),
-            utmContent: searchParams.get('utm_content'),
-          }
-        });
-        console.log('[Redirect] Event created:', { clickId, campaignId: campaign.id, variationId });
-      } catch (eventError) {
-        console.error('[Redirect] Failed to create event:', eventError);
-      }
+      // Registrar view
+      await createViewEvent(campaign.id, selectedVariationId, clickId, request, searchParams);
     }
     
     // 4. Buscar URL de destino
-    const variation = campaign.variations.find(v => v.id === variationId);
+    const variation = campaign.variations.find(v => v.id === selectedVariationId);
     if (!variation) {
       return new NextResponse('Variation not found', { status: 404 });
     }
@@ -91,7 +75,7 @@ export async function GET(
     });
     
     // Injetar tracking na utm_term
-    const trackingCode = generateTrackingCode(campaign.id, variationId!, clickId);
+    const trackingCode = generateTrackingCode(campaign.id, selectedVariationId, clickId);
     destinationUrl.searchParams.set('utm_term', trackingCode);
     
     // 6. Redirect 302
@@ -100,6 +84,39 @@ export async function GET(
   } catch (error) {
     console.error('[Redirector Error]', error);
     return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+// Helper function para criar evento de view
+async function createViewEvent(
+  campaignId: number,
+  variationId: number,
+  clickId: string,
+  request: NextRequest,
+  searchParams: URLSearchParams
+) {
+  try {
+    await db.event.create({
+      data: {
+        clickId,
+        campaignId,
+        variationId,
+        eventType: 'view',
+        eventName: null,
+        eventValue: null,
+        ipAddress: request.headers.get('x-forwarded-for'),
+        userAgent: request.headers.get('user-agent'),
+        referer: request.headers.get('referer'),
+        utmSource: searchParams.get('utm_source'),
+        utmMedium: searchParams.get('utm_medium'),
+        utmCampaign: searchParams.get('utm_campaign'),
+        utmTerm: searchParams.get('utm_term'),
+        utmContent: searchParams.get('utm_content'),
+      }
+    });
+    console.log('[Redirect] Event created:', { clickId, campaignId, variationId });
+  } catch (eventError) {
+    console.error('[Redirect] Failed to create event:', eventError);
   }
 }
 
