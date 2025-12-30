@@ -68,7 +68,7 @@ export default function WebhooksPage() {
             >
               <div className="text-center">
                 <div className="text-2xl mb-2">📦</div>
-                <p className="font-medium text-sm">{platform.name}</p>
+                <p className="font-medium text-sm text-gray-900">{platform.name}</p>
               </div>
             </button>
           ))}
@@ -78,7 +78,7 @@ export default function WebhooksPage() {
       {/* Webhooks Ativos */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium">Webhooks Configurados</h2>
+          <h2 className="text-lg font-medium text-gray-900">Webhooks Configurados</h2>
         </div>
         
         {loading ? (
