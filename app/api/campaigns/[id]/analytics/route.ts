@@ -98,8 +98,8 @@ export async function GET(
       
     FROM "Variation" v
     LEFT JOIN "Event" e ON v.id = e."variationId" 
-      AND e."createdAt" >= ${startDate}::timestamp 
-      AND e."createdAt" <= ${endDate}::timestamp
+      AND DATE(e."createdAt") >= DATE(${startDate}::timestamp)
+      AND DATE(e."createdAt") <= DATE(${endDate}::timestamp)
     WHERE v."campaignId" = ${campaignId}
     GROUP BY v.id, v.name
     ORDER BY revenue DESC
@@ -124,8 +124,8 @@ export async function GET(
         COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as step_purchase
       FROM "Event"
       WHERE "campaignId" = ${campaignId}
-        AND "createdAt" >= ${startDate}::timestamp 
-        AND "createdAt" <= ${endDate}::timestamp
+        AND DATE("createdAt") >= DATE(${startDate}::timestamp)
+        AND DATE("createdAt") <= DATE(${endDate}::timestamp)
       GROUP BY "variationId"
     )
     SELECT * FROM funnel_steps
@@ -145,8 +145,8 @@ export async function GET(
       COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) as revenue
     FROM "Event"
     WHERE "campaignId" = ${campaignId}
-      AND "createdAt" >= ${startDate}::timestamp 
-      AND "createdAt" <= ${endDate}::timestamp
+      AND DATE("createdAt") >= DATE(${startDate}::timestamp)
+      AND DATE("createdAt") <= DATE(${endDate}::timestamp)
     GROUP BY DATE("createdAt"), "variationId"
     ORDER BY date ASC
   `;
