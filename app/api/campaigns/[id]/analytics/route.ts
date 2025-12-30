@@ -37,8 +37,19 @@ export async function GET(
 
   const campaignId = parseInt(params.id);
   const { searchParams } = request.nextUrl;
-  const startDate = searchParams.get('start_date') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const endDate = searchParams.get('end_date') || new Date().toISOString();
+  
+  // Datas padrão: últimos 30 dias
+  const defaultStartDate = new Date();
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+  defaultStartDate.setHours(0, 0, 0, 0);
+  
+  const defaultEndDate = new Date();
+  defaultEndDate.setHours(23, 59, 59, 999);
+  
+  const startDate = searchParams.get('start_date') || defaultStartDate.toISOString();
+  const endDate = searchParams.get('end_date') || defaultEndDate.toISOString();
+  
+  console.log('[Analytics] Fetching data for campaign', campaignId, 'from', startDate, 'to', endDate);
 
   // Verificar se campanha pertence ao usuário
   const campaign = await db.campaign.findFirst({
@@ -96,6 +107,9 @@ export async function GET(
   
   // Converter BigInt para Number
   const metrics = convertBigIntToNumber(metricsRaw);
+  
+  console.log('[Analytics] Metrics fetched:', metrics.length, 'variations');
+  console.log('[Analytics] Sample metric:', metrics[0]);
 
   // Buscar dados do funil
   const funnelDataRaw = await db.$queryRaw`
