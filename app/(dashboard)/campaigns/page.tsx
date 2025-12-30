@@ -57,9 +57,12 @@ export default function CampaignsPage() {
                       {c.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right text-sm">
-                    <Link href={`/campaigns/${c.id}`} className="text-blue-600 hover:text-blue-900">
-                      Ver Analytics
+                  <td className="px-6 py-4 text-right text-sm space-x-3">
+                    <Link href={`/campaigns/${c.id}/edit`} className="text-blue-600 hover:text-blue-900">
+                      Editar
+                    </Link>
+                    <Link href={`/campaigns/${c.id}`} className="text-green-600 hover:text-green-900">
+                      Analytics
                     </Link>
                   </td>
                 </tr>

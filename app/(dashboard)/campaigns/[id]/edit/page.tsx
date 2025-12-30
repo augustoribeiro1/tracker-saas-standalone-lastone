@@ -1,24 +1,54 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-export default function NewCampaignPage() {
+export default function EditCampaignPage() {
   const router = useRouter();
+  const params = useParams();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     variations: [
-      { name: 'Variação A', destinationUrl: '', weight: 50 },
-      { name: 'Variação B', destinationUrl: '', weight: 50 }
+      { id: 0, name: 'Variação A', destinationUrl: '', weight: 50 },
+      { id: 0, name: 'Variação B', destinationUrl: '', weight: 50 }
     ]
   });
 
   // Calcular soma total de weights
   const totalWeight = formData.variations.reduce((sum, v) => sum + (v.weight || 0), 0);
   const isWeightValid = totalWeight === 100;
+
+  useEffect(() => {
+    fetchCampaign();
+  }, []);
+
+  const fetchCampaign = async () => {
+    try {
+      const res = await fetch(`/api/campaigns/${params.id}`);
+      const data = await res.json();
+      
+      if (res.ok) {
+        setFormData({
+          name: data.campaign.name,
+          slug: data.campaign.slug,
+          variations: data.campaign.variations.map((v: any) => ({
+            id: v.id,
+            name: v.name,
+            destinationUrl: v.destinationUrl,
+            weight: v.weight
+          }))
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar campanha:', error);
+    } finally {
+      setFetching(false);
+    }
+  };
 
   // Função para adicionar https:// se não tiver protocolo
   const normalizeUrl = (url: string) => {
@@ -51,8 +81,8 @@ export default function NewCampaignPage() {
         }))
       };
 
-      const res = await fetch('/api/campaigns', {
-        method: 'POST',
+      const res = await fetch(`/api/campaigns/${params.id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(normalizedData)
       });
@@ -60,23 +90,27 @@ export default function NewCampaignPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Erro ao criar campanha');
-        console.error('Erro ao criar campanha:', data);
+        setError(data.error || 'Erro ao atualizar campanha');
+        console.error('Erro ao atualizar campanha:', data);
         return;
       }
 
       router.push('/campaigns');
     } catch (error) {
-      console.error('Erro ao criar campanha:', error);
-      setError('Erro ao criar campanha. Verifique o console para mais detalhes.');
+      console.error('Erro ao atualizar campanha:', error);
+      setError('Erro ao atualizar campanha. Verifique o console para mais detalhes.');
     } finally {
       setLoading(false);
     }
   };
 
+  if (fetching) {
+    return <div className="p-6">Carregando...</div>;
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Nova Campanha</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Editar Campanha</h1>
       
       {error && (
         <div className="mb-4 rounded-md bg-red-50 p-4">
@@ -179,9 +213,19 @@ export default function NewCampaignPage() {
           ))}
         </div>
 
-        <Button type="submit" disabled={loading || !isWeightValid} className="w-full">
-          {loading ? 'Criando...' : isWeightValid ? 'Criar Campanha' : 'Ajuste as porcentagens (total deve ser 100%)'}
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push('/campaigns')}
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={loading || !isWeightValid} className="flex-1">
+            {loading ? 'Salvando...' : isWeightValid ? 'Salvar Alterações' : 'Ajuste as % (total deve ser 100%)'}
+          </Button>
+        </div>
       </form>
     </div>
   );
