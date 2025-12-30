@@ -156,6 +156,7 @@ model CustomDomain {
   userId          Int
   domain          String    @unique
   status          String    @default("pending")
+  vercelConfigured Boolean  @default(false)
   dnsConfigured   Boolean   @default(false)
   dnsVerifiedAt   DateTime?
   sslStatus       String    @default("pending")

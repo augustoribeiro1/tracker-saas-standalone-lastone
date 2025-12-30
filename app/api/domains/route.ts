@@ -25,20 +25,60 @@ export async function POST(request: NextRequest) {
 
   const { domain } = await request.json();
 
+  // Validar formato do domínio
+  if (!domain || !domain.match(/^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,}$/i)) {
+    return NextResponse.json({ error: 'Invalid domain format' }, { status: 400 });
+  }
+
   const existing = await db.customDomain.findUnique({ where: { domain } });
   if (existing) {
     return NextResponse.json({ error: 'Domain already registered' }, { status: 400 });
   }
 
-  const newDomain = await db.customDomain.create({
-    data: {
-      userId: parseInt(session.user.id),
-      domain,
-      status: 'pending'
-    }
-  });
+  try {
+    // 1. Adicionar domínio ao Vercel AUTOMATICAMENTE via API
+    const { addDomainToVercel } = await import('@/lib/vercel');
+    
+    console.log(`[Domains API] Adicionando domínio ${domain} ao Vercel...`);
+    
+    const vercelResult = await addDomainToVercel(domain);
+    
+    console.log(`[Domains API] Domínio ${domain} adicionado ao Vercel:`, vercelResult);
 
-  return NextResponse.json({ domain: newDomain });
+    // 2. Salvar no banco
+    const newDomain = await db.customDomain.create({
+      data: {
+        userId: parseInt(session.user.id),
+        domain,
+        status: 'verifying', // Vercel vai verificar DNS automaticamente
+        vercelConfigured: true
+      }
+    });
+
+    return NextResponse.json({ 
+      domain: newDomain,
+      message: 'Domínio adicionado ao Vercel automaticamente! Configure o DNS e aguarde verificação.'
+    });
+
+  } catch (error: any) {
+    console.error('[Domains API] Erro ao adicionar domínio:', error);
+    
+    // Salvar no banco mesmo se Vercel falhar (usuário pode configurar manualmente depois)
+    const newDomain = await db.customDomain.create({
+      data: {
+        userId: parseInt(session.user.id),
+        domain,
+        status: 'pending',
+        vercelConfigured: false
+      }
+    });
+
+    return NextResponse.json({ 
+      domain: newDomain,
+      warning: 'Domínio salvo, mas erro ao adicionar no Vercel. Configure manualmente ou tente novamente.',
+      error: error.message
+    }, { status: 207 }); // 207 Multi-Status = parcialmente OK
+  }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -50,6 +90,34 @@ export async function DELETE(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const domainId = searchParams.get('id');
 
+  // Buscar domínio antes de deletar
+  const domain = await db.customDomain.findFirst({
+    where: {
+      id: parseInt(domainId!),
+      userId: parseInt(session.user.id)
+    }
+  });
+
+  if (!domain) {
+    return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
+  }
+
+  try {
+    // 1. Remover do Vercel AUTOMATICAMENTE
+    const { removeDomainFromVercel } = await import('@/lib/vercel');
+    
+    console.log(`[Domains API] Removendo domínio ${domain.domain} do Vercel...`);
+    
+    await removeDomainFromVercel(domain.domain);
+    
+    console.log(`[Domains API] Domínio ${domain.domain} removido do Vercel`);
+
+  } catch (error: any) {
+    console.error('[Domains API] Erro ao remover do Vercel:', error);
+    // Continua e deleta do banco mesmo se Vercel falhar
+  }
+
+  // 2. Deletar do banco
   await db.customDomain.delete({
     where: {
       id: parseInt(domainId!),
