@@ -12,7 +12,7 @@
 
 1. **Vercel Dashboard** → **Storage** → **Create Database**
 2. Escolher **"Neon"** (Serverless Postgres)
-3. Database Name: `tracker-saas-db`
+3. Database Name: `split2-db`
 4. Region: US East (Ohio) ou mais próxima
 5. Clicar **Create**
 6. **COPIAR** a DATABASE_URL completa
@@ -24,7 +24,7 @@
 ### 2.1 Import projeto
 
 1. **Vercel** → **New Project**
-2. Import do GitHub: `tracker-saas-standalone`
+2. Import do GitHub: `split2-standalone`
 3. Clicar **Import**
 
 ### 2.2 Configurar

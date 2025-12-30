@@ -1,6 +1,6 @@
-# 🚀 Tracker SaaS - Standalone Version
+# 🚀 Split2 - Standalone Version
 
-Versão **standalone simplificada** do Tracker SaaS - pronta para deploy no Vercel em 5 minutos!
+Versão **standalone simplificada** do Split2 - pronta para deploy no Vercel em 5 minutos!
 
 ## ✅ O que tem aqui:
 
@@ -20,7 +20,7 @@ Versão **standalone simplificada** do Tracker SaaS - pronta para deploy no Verc
 
 1. Vercel Dashboard → Storage → Create Database
 2. Escolher **Neon** (Serverless Postgres)
-3. Database Name: `tracker-saas-db`
+3. Database Name: `split2-db`
 4. Copiar a **DATABASE_URL**
 
 ### 2. Fazer Deploy

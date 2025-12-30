@@ -6,7 +6,7 @@ import { ToastProvider } from '@/components/providers/toast-provider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Tracker SaaS - Split Testing & Analytics',
+  title: 'Split2 - Split Testing & Analytics',
   description: 'Plataforma completa de testes A/B e rastreamento de conversões',
 };
 
