@@ -45,20 +45,20 @@ export async function GET(
       COALESCE(SUM(CASE WHEN e."eventType" = 'purchase' THEN e."eventValue" ELSE 0 END), 0) as revenue,
       
       ROUND(
-        COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' AND e."eventName" = 'checkout_click' THEN e."clickId" END) * 100.0 / 
-        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0), 
+        (COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' AND e."eventName" = 'checkout_click' THEN e."clickId" END) * 100.0 / 
+        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0))::numeric, 
         2
       ) as checkout_rate,
       
       ROUND(
-        COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) * 100.0 / 
-        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0), 
+        (COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) * 100.0 / 
+        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0))::numeric, 
         2
       ) as purchase_rate,
       
       ROUND(
-        COALESCE(SUM(CASE WHEN e."eventType" = 'purchase' THEN e."eventValue" ELSE 0 END), 0) / 
-        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END), 0),
+        (COALESCE(SUM(CASE WHEN e."eventType" = 'purchase' THEN e."eventValue" ELSE 0 END), 0) / 
+        NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END), 0))::numeric,
         2
       ) as avg_order_value
       
