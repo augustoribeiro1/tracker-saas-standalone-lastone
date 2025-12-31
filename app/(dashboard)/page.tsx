@@ -155,7 +155,7 @@ export default function DashboardPage() {
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-medium">Campanhas Ativas</h2>
+          <h2 className="text-lg font-medium text-gray-900">Últimas Campanhas</h2>
           <Link href="/campaigns" className="text-sm text-blue-600 hover:text-blue-900">
             Ver todas
           </Link>
@@ -169,22 +169,47 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {campaigns.slice(0, 5).map((campaign: any) => (
-              <div key={campaign.id} className="px-6 py-4 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">{campaign.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      <code className="bg-gray-100 px-2 py-0.5 rounded">/r/{campaign.slug}</code>
-                    </p>
-                  </div>
-                  <Link href={`/campaigns/${campaign.id}`}>
-                    <Button variant="outline" size="sm">Ver Analytics</Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campanha</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {campaigns.slice(0, 5).map((campaign: any) => {
+                  const fullUrl = campaign.customDomain 
+                    ? `https://${campaign.customDomain.domain}/r/${campaign.slug}`
+                    : `/r/${campaign.slug}`;
+                  
+                  return (
+                    <tr key={campaign.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{campaign.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {campaign.variations?.length || 0} variações
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900">
+                          {fullUrl.length > 40 ? fullUrl.substring(0, 40) + '...' : fullUrl}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <Link href={`/campaigns/${campaign.id}/edit`} className="text-blue-600 hover:text-blue-900 mr-3">
+                          Editar
+                        </Link>
+                        <Link href={`/campaigns/${campaign.id}`} className="text-green-600 hover:text-green-900">
+                          Analytics
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

@@ -34,33 +34,33 @@ export async function GET() {
   // Estatísticas dos últimos 7 dias
   const stats = await db.$queryRaw<any[]>`
     SELECT 
-      COUNT(DISTINCT CASE WHEN event_type = 'view' THEN click_id END) as total_views,
-      COUNT(DISTINCT CASE WHEN event_type = 'conversion' THEN click_id END) as total_conversions,
-      COUNT(DISTINCT CASE WHEN event_type = 'purchase' THEN click_id END) as total_purchases,
-      COALESCE(SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END), 0) as total_revenue,
+      COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END) as total_views,
+      COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) as total_conversions,
+      COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as total_purchases,
+      COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) as total_revenue,
       
       ROUND(
-        COUNT(DISTINCT CASE WHEN event_type = 'conversion' THEN click_id END) * 100.0 / 
-        NULLIF(COUNT(DISTINCT CASE WHEN event_type = 'view' THEN click_id END), 0), 
+        COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) * 100.0 / 
+        NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0), 
         2
       ) as conversion_rate,
       
       ROUND(
-        COUNT(DISTINCT CASE WHEN event_type = 'purchase' THEN click_id END) * 100.0 / 
-        NULLIF(COUNT(DISTINCT CASE WHEN event_type = 'view' THEN click_id END), 0), 
+        COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) * 100.0 / 
+        NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0), 
         2
       ) as purchase_rate,
       
       ROUND(
-        COALESCE(SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END), 0) / 
-        NULLIF(COUNT(DISTINCT CASE WHEN event_type = 'purchase' THEN click_id END), 0),
+        COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) / 
+        NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END), 0),
         2
       ) as avg_order_value
       
-    FROM events e
-    INNER JOIN campaigns c ON e.campaign_id = c.id
-    WHERE c.user_id = ${userId}
-      AND e.created_at >= ${sevenDaysAgo}
+    FROM "Event" e
+    INNER JOIN "Campaign" c ON e."campaignId" = c.id
+    WHERE c."userId" = ${userId}
+      AND e."createdAt" >= ${sevenDaysAgo}
   `;
 
   const currentStats = stats[0] || {
@@ -76,15 +76,15 @@ export async function GET() {
   // Timeline dos últimos 7 dias
   const timeline = await db.$queryRaw<any[]>`
     SELECT 
-      DATE(e.created_at) as date,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'view' THEN e.click_id END) as views,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'conversion' THEN e.click_id END) as conversions,
-      COUNT(DISTINCT CASE WHEN e.event_type = 'purchase' THEN e.click_id END) as purchases
-    FROM events e
-    INNER JOIN campaigns c ON e.campaign_id = c.id
-    WHERE c.user_id = ${userId}
-      AND e.created_at >= ${sevenDaysAgo}
-    GROUP BY DATE(e.created_at)
+      DATE(e."createdAt") as date,
+      COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END) as views,
+      COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' THEN e."clickId" END) as conversions,
+      COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) as purchases
+    FROM "Event" e
+    INNER JOIN "Campaign" c ON e."campaignId" = c.id
+    WHERE c."userId" = ${userId}
+      AND e."createdAt" >= ${sevenDaysAgo}
+    GROUP BY DATE(e."createdAt")
     ORDER BY date ASC
   `;
 
