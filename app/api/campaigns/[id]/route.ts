@@ -51,7 +51,7 @@ export async function PUT(
 
   const campaignId = parseInt(params.id);
   const body = await request.json();
-  const { name, slug, variations } = body;
+  const { name, slug, variations, enableSecondaryConversion, checkoutUrl } = body;
 
   try {
     // Verificar se campanha existe e pertence ao usuário
@@ -74,12 +74,21 @@ export async function PUT(
       }, { status: 400 });
     }
 
+    // Validar checkout URL se conversão secundária estiver ativada
+    if (enableSecondaryConversion && !checkoutUrl) {
+      return NextResponse.json({
+        error: 'URL do Checkout é obrigatória quando Conversão Secundária está ativada'
+      }, { status: 400 });
+    }
+
     // Atualizar campanha
     const updated = await db.campaign.update({
       where: { id: campaignId },
       data: {
         name,
         slug,
+        enableSecondaryConversion: enableSecondaryConversion || false,
+        checkoutUrl: enableSecondaryConversion ? checkoutUrl : null,
         updatedAt: new Date()
       }
     });
