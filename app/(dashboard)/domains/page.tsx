@@ -140,7 +140,6 @@ export default function DomainsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Domínio</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">DNS</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SSL</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
               </tr>
             </thead>
@@ -157,9 +156,6 @@ export default function DomainsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {domain.dnsConfigured ? '✅ Configurado' : '⏳ Pendente'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {domain.sslStatus === 'active' ? '🔒 Ativo' : '⏳ Pendente'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                     <button

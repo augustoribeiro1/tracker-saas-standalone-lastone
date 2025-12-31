@@ -92,11 +92,11 @@ export default function DashboardPage() {
         <StatsCard
           title="Total de Views"
           value={stats?.totalViews?.toLocaleString() || '0'}
-          subtitle="Últimos 30 dias"
+          subtitle="Últimos 7 dias"
           trend={stats?.viewsTrend}
         />
         <StatsCard
-          title="Conversões"
+          title="Conversão Secundária"
           value={stats?.totalConversions?.toLocaleString() || '0'}
           subtitle={`Taxa: ${stats?.conversionRate?.toFixed(2) || '0'}%`}
           trend={stats?.conversionsTrend}
@@ -139,7 +139,7 @@ export default function DashboardPage() {
 
       {stats?.timeline && stats.timeline.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Performance - Últimos 30 Dias</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Performance - Últimos 7 Dias</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={stats.timeline}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -147,7 +147,7 @@ export default function DashboardPage() {
               <YAxis />
               <Tooltip />
               <Line type="monotone" dataKey="views" stroke="#3B82F6" name="Views" />
-              <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conversões" />
+              <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conversão Secundária" />
             </LineChart>
           </ResponsiveContainer>
         </div>

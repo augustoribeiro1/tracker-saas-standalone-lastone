@@ -12,8 +12,7 @@ function DashboardNav() {
   const navigation = [
     { name: 'Dashboard', href: '/' },
     { name: 'Campanhas', href: '/campaigns' },
-    { name: 'Analytics', href: '/analytics' },
-    { name: 'Webhooks', href: '/webhooks' },
+    { name: 'Checkout', href: '/webhooks' },
     { name: 'Domínios', href: '/domains' },
     { name: 'Planos', href: '/pricing' },
   ];

@@ -87,7 +87,7 @@ export default function CampaignAnalyticsPage() {
           subtitle="Visitantes únicos"
         />
         <StatsCard
-          title="Cliques no Checkout"
+          title="Conversão Secundária"
           value={totalMetrics.checkouts.toLocaleString()}
           subtitle={`${avgCheckoutRate.toFixed(2)}% de conversão`}
         />
@@ -112,7 +112,7 @@ export default function CampaignAnalyticsPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Variação</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Views</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Checkouts</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Conv. Secundária</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Taxa %</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Compras</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Taxa %</th>
@@ -164,7 +164,7 @@ export default function CampaignAnalyticsPage() {
               <Tooltip />
               <Legend />
               <Line type="monotone" dataKey="views" stroke="#3B82F6" name="Views" />
-              <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conversões" />
+              <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conv. Secundária" />
               <Line type="monotone" dataKey="purchases" stroke="#F59E0B" name="Compras" />
             </LineChart>
           </ResponsiveContainer>
@@ -215,7 +215,7 @@ export default function CampaignAnalyticsPage() {
                   </div>
                   <div className="flex-1">
                     <div className="h-8 bg-green-500 rounded" style={{ width: `${checkouts / views * 100}%` }}>
-                      <span className="text-xs text-white px-2 leading-8">Checkouts: {checkouts}</span>
+                      <span className="text-xs text-white px-2 leading-8">Conv. Sec.: {checkouts}</span>
                     </div>
                   </div>
                   <div className="flex-1">

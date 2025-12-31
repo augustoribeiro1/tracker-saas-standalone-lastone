@@ -8,13 +8,35 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  const fetchCampaigns = () => {
     fetch('/api/campaigns')
       .then(r => r.json())
       .then(data => {
         setCampaigns(data.campaigns || []);
         setLoading(false);
       });
-  }, []);
+  };
+
+  const deleteCampaign = async (id: number, name: string) => {
+    if (!confirm(`Tem certeza que deseja deletar a campanha "${name}"? Todos os dados serão perdidos!`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        alert('Campanha deletada com sucesso!');
+        fetchCampaigns();
+      } else {
+        alert('Erro ao deletar campanha');
+      }
+    } catch (error) {
+      alert('Erro ao deletar campanha');
+    }
+  };
 
   if (loading) return <div className="p-6">Carregando...</div>;
 
@@ -85,6 +107,12 @@ export default function CampaignsPage() {
                       <Link href={`/campaigns/${c.id}`} className="text-green-600 hover:text-green-900">
                         Analytics
                       </Link>
+                      <button
+                        onClick={() => deleteCampaign(c.id, c.name)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Deletar
+                      </button>
                     </td>
                   </tr>
                 );

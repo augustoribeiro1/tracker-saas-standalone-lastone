@@ -17,7 +17,7 @@ export const WEBHOOK_PLATFORMS = {
   eduzz: {
     id: 'eduzz',
     name: 'Eduzz',
-    icon: '📦',
+    icon: '🛒',
   },
   perfectpay: {
     id: 'perfectpay',
@@ -27,6 +27,6 @@ export const WEBHOOK_PLATFORMS = {
   braip: {
     id: 'braip',
     name: 'Braip',
-    icon: '🚀',
+    icon: '⚡',
   },
 };

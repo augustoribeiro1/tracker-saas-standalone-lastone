@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   const userId = parseInt(session.user.id);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   // Buscar usuário com limites
   const user = await db.user.findUnique({
@@ -31,7 +31,7 @@ export async function GET() {
     db.customDomain.count({ where: { userId } }),
   ]);
 
-  // Estatísticas dos últimos 30 dias
+  // Estatísticas dos últimos 7 dias
   const stats = await db.$queryRaw<any[]>`
     SELECT 
       COUNT(DISTINCT CASE WHEN event_type = 'view' THEN click_id END) as total_views,
@@ -60,7 +60,7 @@ export async function GET() {
     FROM events e
     INNER JOIN campaigns c ON e.campaign_id = c.id
     WHERE c.user_id = ${userId}
-      AND e.created_at >= ${thirtyDaysAgo}
+      AND e.created_at >= ${sevenDaysAgo}
   `;
 
   const currentStats = stats[0] || {
@@ -73,7 +73,7 @@ export async function GET() {
     avg_order_value: 0,
   };
 
-  // Timeline dos últimos 30 dias
+  // Timeline dos últimos 7 dias
   const timeline = await db.$queryRaw<any[]>`
     SELECT 
       DATE(e.created_at) as date,
@@ -83,7 +83,7 @@ export async function GET() {
     FROM events e
     INNER JOIN campaigns c ON e.campaign_id = c.id
     WHERE c.user_id = ${userId}
-      AND e.created_at >= ${thirtyDaysAgo}
+      AND e.created_at >= ${sevenDaysAgo}
     GROUP BY DATE(e.created_at)
     ORDER BY date ASC
   `;

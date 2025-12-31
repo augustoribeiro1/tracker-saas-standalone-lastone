@@ -50,7 +50,7 @@ export default function WebhooksPage() {
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Webhooks</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Plataformas de Checkout</h1>
         <p className="mt-1 text-sm text-gray-500">
           Configure webhooks para rastrear vendas de plataformas de checkout
         </p>
@@ -67,7 +67,7 @@ export default function WebhooksPage() {
               className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition"
             >
               <div className="text-center">
-                <div className="text-2xl mb-2">📦</div>
+                <div className="text-2xl mb-2">{platform.icon}</div>
                 <p className="font-medium text-sm text-gray-900">{platform.name}</p>
               </div>
             </button>
