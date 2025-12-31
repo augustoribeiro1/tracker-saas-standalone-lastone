@@ -103,9 +103,16 @@ export default function EditCampaignPage() {
       return;
     }
 
+    // Validar domínio selecionado
+    if (!formData.customDomainId) {
+      setError('Você precisa selecionar um domínio de tracking');
+      setLoading(false);
+      return;
+    }
+
     // Validar checkout URL se conversão secundária estiver ativada
     if (formData.enableSecondaryConversion && !formData.checkoutUrl) {
-      setError('URL do Checkout é obrigatória quando Conversão Secundária está ativada');
+      setError('URL de Destino é obrigatória quando Conversão Secundária está ativada');
       setLoading(false);
       return;
     }
@@ -188,23 +195,32 @@ export default function EditCampaignPage() {
 
         {/* Seletor de Domínio */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Domínio de Tracking</label>
-          <select
-            value={formData.customDomainId}
-            onChange={e => setFormData({...formData, customDomainId: e.target.value})}
-            className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
-          >
-            <option value="">Usar domínio padrão (Vercel)</option>
-            {domains.map(domain => (
-              <option key={domain.id} value={domain.id}>
-                {domain.domain}
-              </option>
-            ))}
-          </select>
-          {domains.length === 0 && (
-            <p className="mt-1 text-sm text-gray-500">
-              Nenhum domínio configurado. <a href="/domains" className="text-blue-600 hover:underline">Adicionar domínio</a>
-            </p>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Domínio de Tracking <span className="text-red-500">*</span>
+          </label>
+          {domains.length === 0 ? (
+            <div className="rounded-md bg-yellow-50 p-4">
+              <p className="text-sm text-yellow-800">
+                Você precisa configurar um domínio customizado para criar campanhas.{' '}
+                <a href="/domains" className="font-medium text-yellow-900 underline hover:text-yellow-700">
+                  Adicionar domínio agora
+                </a>
+              </p>
+            </div>
+          ) : (
+            <select
+              required
+              value={formData.customDomainId}
+              onChange={e => setFormData({...formData, customDomainId: e.target.value})}
+              className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+            >
+              <option value="">Selecione um domínio</option>
+              {domains.map(domain => (
+                <option key={domain.id} value={domain.id}>
+                  {domain.domain}
+                </option>
+              ))}
+            </select>
           )}
         </div>
 
@@ -288,10 +304,10 @@ export default function EditCampaignPage() {
             />
             <div className="flex-1">
               <label htmlFor="enableSecondaryConversion" className="block text-sm font-medium text-gray-900 cursor-pointer">
-                Ativar Conversão Secundária (Tracking de Cliques no Checkout)
+                Ativar Conversão Secundária (Tracking de Cliques no Funil)
               </label>
               <p className="text-sm text-gray-500 mt-1">
-                Gera uma URL especial para trackear quando visitantes clicam no botão "Comprar" da sua página
+                Gera uma URL especial para trackear quando visitantes clicam no botão/link da sua página (seja uma passagem de presell, advertorial, VSL ou página de produto)
               </p>
             </div>
           </div>
@@ -300,7 +316,7 @@ export default function EditCampaignPage() {
             <div className="ml-7 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL do Checkout <span className="text-red-500">*</span>
+                  URL de Destino <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -308,10 +324,10 @@ export default function EditCampaignPage() {
                   value={formData.checkoutUrl}
                   onChange={e => setFormData({...formData, checkoutUrl: e.target.value})}
                   className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
-                  placeholder="meusite.com/checkout ou https://meusite.com/checkout"
+                  placeholder="meusite.com/proxima-pagina ou https://meusite.com/proxima-pagina"
                 />
                 <p className="mt-1 text-sm text-gray-500">
-                  URL para onde o visitante será redirecionado após clicar no botão de compra (pode ser com ou sem https://)
+                  URL para onde o visitante será redirecionado após clicar no botão/link (pode ser com ou sem https://)
                 </p>
               </div>
 
@@ -320,7 +336,7 @@ export default function EditCampaignPage() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-blue-800 mb-2">
-                      1. Altere os botões "Comprar" da sua página de vendas para apontar para:
+                      1. Altere o botão/link que deseja rastrear na sua estrutura para apontar para:
                     </p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 bg-white px-3 py-2 rounded text-blue-900 font-mono text-sm">
@@ -341,7 +357,7 @@ export default function EditCampaignPage() {
                     2. Quando o visitante clicar, será registrada a conversão secundária
                   </p>
                   <p className="text-sm text-blue-800">
-                    3. Em seguida, será redirecionado automaticamente para o checkout configurado acima
+                    3. Em seguida, o visitante será redirecionado automaticamente para a URL de destino configurada acima
                   </p>
                 </div>
               </div>
