@@ -106,15 +106,7 @@ export default function DomainsPage() {
 
       {/* Adicionar Domínio */}
       <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Adicionar Novo Domínio</h2>
-          <button
-            onClick={fixOldDomains}
-            className="text-sm text-blue-600 hover:text-blue-800"
-          >
-            🔧 Corrigir DNS de domínios antigos
-          </button>
-        </div>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Adicionar Novo Domínio</h2>
         <form onSubmit={addDomain} className="flex gap-4">
           <input
             type="text"

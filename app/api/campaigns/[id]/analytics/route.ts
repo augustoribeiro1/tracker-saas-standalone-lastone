@@ -143,11 +143,10 @@ export async function GET(
   // Converter BigInt para Number
   const funnelData = convertBigIntToNumber(funnelDataRaw);
 
-  // Buscar timeline (últimos 30 dias)
+  // Buscar timeline (período selecionado)
   const timelineRaw = await db.$queryRaw`
     SELECT 
       DATE("createdAt") as date,
-      "variationId",
       COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END) as views,
       COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) as conversions,
       COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as purchases,
@@ -156,7 +155,7 @@ export async function GET(
     WHERE "campaignId" = ${campaignId}
       AND DATE("createdAt") >= DATE(${startDate}::timestamp)
       AND DATE("createdAt") <= DATE(${endDate}::timestamp)
-    GROUP BY DATE("createdAt"), "variationId"
+    GROUP BY DATE("createdAt")
     ORDER BY date ASC
   `;
   

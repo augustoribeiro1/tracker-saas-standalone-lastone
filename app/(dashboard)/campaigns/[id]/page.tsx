@@ -195,17 +195,20 @@ export default function CampaignAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Timeline */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Views ao Longo do Tempo</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Performance ao Longo do Tempo</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data.timeline}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip />
+              <Legend />
               <Line type="monotone" dataKey="views" stroke="#3B82F6" name="Views" strokeWidth={2} />
+              <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conversão Secundária" strokeWidth={2} />
+              <Line type="monotone" dataKey="purchases" stroke="#F59E0B" name="Compras" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
-          <p className="text-xs text-gray-500 mt-2">Total de views (todas variações)</p>
+          <p className="text-xs text-gray-500 mt-2">Views, conversões e compras no período selecionado</p>
         </div>
 
         {/* Distribuição de Views por Variação */}

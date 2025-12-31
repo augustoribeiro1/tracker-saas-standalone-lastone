@@ -47,6 +47,15 @@ export default function WebhooksPage() {
     alert('Copiado para área de transferência!');
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'Ativo';
+      case 'inactive': return 'Inativo';
+      case 'pending': return 'Pendente';
+      default: return status;
+    }
+  };
+
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
       <div>
@@ -115,7 +124,7 @@ export default function WebhooksPage() {
                     <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
                       webhook.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {webhook.status}
+                      {getStatusText(webhook.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -200,8 +209,8 @@ export default function WebhooksPage() {
 
               {/* Instruções */}
               <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-sm mb-2">📋 Passo a Passo:</h4>
-                <ol className="text-sm space-y-2 list-decimal list-inside">
+                <h4 className="font-medium text-sm mb-2 text-blue-900">📋 Passo a Passo:</h4>
+                <ol className="text-sm text-blue-900 space-y-2 list-decimal list-inside">
                   <li>Acesse o painel da {newWebhook.platform}</li>
                   <li>Vá em Configurações → Webhooks</li>
                   <li>Cole a URL acima</li>
