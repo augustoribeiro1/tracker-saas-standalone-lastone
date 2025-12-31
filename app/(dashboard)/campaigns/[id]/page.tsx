@@ -125,7 +125,7 @@ export default function CampaignAnalyticsPage() {
                 const totalPurchases = data.metrics.reduce((sum: number, m: any) => sum + parseInt(m.purchases || 0), 0);
                 const hasPurchases = totalPurchases > 0;
                 
-                let bestVariationId = null;
+                let bestVariationId: number | null = null;
                 let bestPurchaseRate = -1;
                 
                 if (hasPurchases) {
