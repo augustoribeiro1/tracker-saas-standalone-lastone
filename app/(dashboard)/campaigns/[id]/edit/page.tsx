@@ -9,9 +9,11 @@ export default function EditCampaignPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
+  const [domains, setDomains] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
+    customDomainId: '',
     enableSecondaryConversion: false,
     checkoutUrl: '',
     variations: [
@@ -24,9 +26,34 @@ export default function EditCampaignPage() {
   const totalWeight = formData.variations.reduce((sum, v) => sum + (v.weight || 0), 0);
   const isWeightValid = totalWeight === 100;
 
+  // Gerar URL completo para conversão secundária
+  const selectedDomain = domains.find(d => d.id.toString() === formData.customDomainId);
+  const conversionUrl = selectedDomain && formData.slug
+    ? `https://${selectedDomain.domain}/c/${formData.slug}`
+    : '';
+
+  // Copiar URL
+  const copyConversionUrl = () => {
+    if (conversionUrl) {
+      navigator.clipboard.writeText(conversionUrl);
+      alert('URL copiado!');
+    }
+  };
+
   useEffect(() => {
     fetchCampaign();
+    fetchDomains();
   }, []);
+
+  const fetchDomains = async () => {
+    try {
+      const res = await fetch('/api/domains');
+      const data = await res.json();
+      setDomains(data.domains || []);
+    } catch (error) {
+      console.error('Erro ao carregar domínios:', error);
+    }
+  };
 
   const fetchCampaign = async () => {
     try {
@@ -37,6 +64,7 @@ export default function EditCampaignPage() {
         setFormData({
           name: data.campaign.name,
           slug: data.campaign.slug,
+          customDomainId: data.campaign.customDomainId?.toString() || '',
           enableSecondaryConversion: data.campaign.enableSecondaryConversion || false,
           checkoutUrl: data.campaign.checkoutUrl || '',
           variations: data.campaign.variations.map((v: any) => ({
@@ -158,66 +186,29 @@ export default function EditCampaignPage() {
           </p>
         </div>
 
-        {/* Conversão Secundária */}
-        <div className="border-t pt-6">
-          <div className="flex items-start gap-3 mb-4">
-            <input
-              type="checkbox"
-              id="enableSecondaryConversion"
-              checked={formData.enableSecondaryConversion}
-              onChange={e => setFormData({...formData, enableSecondaryConversion: e.target.checked})}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div className="flex-1">
-              <label htmlFor="enableSecondaryConversion" className="block text-sm font-medium text-gray-900 cursor-pointer">
-                Ativar Conversão Secundária (Tracking de Cliques no Checkout)
-              </label>
-              <p className="text-sm text-gray-500 mt-1">
-                Gera uma URL especial para trackear quando visitantes clicam no botão "Comprar" da sua página
-              </p>
-            </div>
-          </div>
-
-          {formData.enableSecondaryConversion && (
-            <div className="ml-7 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL do Checkout <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="url"
-                  required={formData.enableSecondaryConversion}
-                  value={formData.checkoutUrl}
-                  onChange={e => setFormData({...formData, checkoutUrl: e.target.value})}
-                  className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
-                  placeholder="https://meusite.com/checkout"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  URL para onde o visitante será redirecionado após clicar no botão de compra
-                </p>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-blue-900 mb-2">📋 Como usar:</h4>
-                <ol className="text-sm text-blue-800 space-y-2 ml-4 list-decimal">
-                  <li>
-                    Altere os botões "Comprar" da sua página de vendas para apontar para:
-                    <code className="block mt-1 bg-white px-2 py-1 rounded text-blue-900 font-mono text-xs">
-                      /c/{formData.slug || 'seu-slug'}
-                    </code>
-                  </li>
-                  <li>
-                    Quando o visitante clicar, será registrada a conversão secundária
-                  </li>
-                  <li>
-                    Em seguida, será redirecionado automaticamente para o checkout configurado acima
-                  </li>
-                </ol>
-              </div>
-            </div>
+        {/* Seletor de Domínio */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Domínio de Tracking</label>
+          <select
+            value={formData.customDomainId}
+            onChange={e => setFormData({...formData, customDomainId: e.target.value})}
+            className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+          >
+            <option value="">Usar domínio padrão (Vercel)</option>
+            {domains.map(domain => (
+              <option key={domain.id} value={domain.id}>
+                {domain.domain}
+              </option>
+            ))}
+          </select>
+          {domains.length === 0 && (
+            <p className="mt-1 text-sm text-gray-500">
+              Nenhum domínio configurado. <a href="/domains" className="text-blue-600 hover:underline">Adicionar domínio</a>
+            </p>
           )}
         </div>
 
+        {/* Variações */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-medium text-gray-900">Variações</h3>
@@ -283,6 +274,79 @@ export default function EditCampaignPage() {
               </p>
             </div>
           ))}
+        </div>
+
+        {/* Conversão Secundária - MOVIDA PARA O FINAL */}
+        <div className="border-t pt-6">
+          <div className="flex items-start gap-3 mb-4">
+            <input
+              type="checkbox"
+              id="enableSecondaryConversion"
+              checked={formData.enableSecondaryConversion}
+              onChange={e => setFormData({...formData, enableSecondaryConversion: e.target.checked})}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <div className="flex-1">
+              <label htmlFor="enableSecondaryConversion" className="block text-sm font-medium text-gray-900 cursor-pointer">
+                Ativar Conversão Secundária (Tracking de Cliques no Checkout)
+              </label>
+              <p className="text-sm text-gray-500 mt-1">
+                Gera uma URL especial para trackear quando visitantes clicam no botão "Comprar" da sua página
+              </p>
+            </div>
+          </div>
+
+          {formData.enableSecondaryConversion && (
+            <div className="ml-7 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  URL do Checkout <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required={formData.enableSecondaryConversion}
+                  value={formData.checkoutUrl}
+                  onChange={e => setFormData({...formData, checkoutUrl: e.target.value})}
+                  className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+                  placeholder="meusite.com/checkout ou https://meusite.com/checkout"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  URL para onde o visitante será redirecionado após clicar no botão de compra (pode ser com ou sem https://)
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-blue-900 mb-3">📋 Como usar:</h4>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-blue-800 mb-2">
+                      1. Altere os botões "Comprar" da sua página de vendas para apontar para:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-white px-3 py-2 rounded text-blue-900 font-mono text-sm">
+                        {conversionUrl || `https://seu-dominio.com/c/${formData.slug || 'seu-slug'}`}
+                      </code>
+                      {conversionUrl && (
+                        <button
+                          type="button"
+                          onClick={copyConversionUrl}
+                          className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+                        >
+                          📋 Copiar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-blue-800">
+                    2. Quando o visitante clicar, será registrada a conversão secundária
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    3. Em seguida, será redirecionado automaticamente para o checkout configurado acima
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">
