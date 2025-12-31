@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, variations, customDomainId } = body;
+    const { name, slug, variations, customDomainId, enableSecondaryConversion, checkoutUrl } = body;
 
     // Validações
     if (!name || !slug || !variations || variations.length < 2) {
@@ -71,6 +71,13 @@ export async function POST(request: NextRequest) {
         { error: 'Nome, slug e pelo menos 2 variações são obrigatórios' },
         { status: 400 }
       );
+    }
+
+    // Validar checkout URL se conversão secundária estiver ativada
+    if (enableSecondaryConversion && !checkoutUrl) {
+      return NextResponse.json({
+        error: 'URL do Checkout é obrigatória quando Conversão Secundária está ativada'
+      }, { status: 400 });
     }
 
     // Validar domínio se fornecido
@@ -110,6 +117,8 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         status: 'active',
         customDomainId: customDomainId ? parseInt(customDomainId) : null,
+        enableSecondaryConversion: enableSecondaryConversion || false,
+        checkoutUrl: enableSecondaryConversion ? checkoutUrl : null,
         variations: {
           create: variations.map((v: any) => ({
             name: v.name,
