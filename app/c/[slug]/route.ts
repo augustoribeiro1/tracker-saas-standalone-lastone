@@ -83,6 +83,19 @@ export async function GET(
       console.log('[Conversion] New visitor without tracking:', { clickId });
     }
     
+    // Se não encontrou variationId, pegar primeira variação da campanha
+    if (!variationId) {
+      const firstVariation = await db.variation.findFirst({
+        where: { campaignId: campaign.id },
+        select: { id: true }
+      });
+      
+      if (firstVariation) {
+        variationId = firstVariation.id;
+        console.log('[Conversion] No original variation found, using first:', { variationId });
+      }
+    }
+    
     // 3. Registrar evento de conversão secundária
     if (variationId) {
       try {
@@ -112,6 +125,11 @@ export async function GET(
         console.error('[Conversion] Error registering event:', error);
         // Continua mesmo com erro - não quebra o redirect
       }
+    } else {
+      console.warn('[Conversion] Could not find variation for campaign:', {
+        campaignId: campaign.id,
+        clickId
+      });
     }
     
     // 4. Construir URL de redirect
