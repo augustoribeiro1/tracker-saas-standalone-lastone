@@ -42,8 +42,11 @@ export async function GET() {
         
         COALESCE(
           ROUND(
-            COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) * 100.0 / 
-            NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0), 
+            CAST(
+              COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) * 100.0 / 
+              NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0)
+              AS numeric
+            ),
             2
           ),
           0
@@ -51,8 +54,11 @@ export async function GET() {
         
         COALESCE(
           ROUND(
-            COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) * 100.0 / 
-            NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0), 
+            CAST(
+              COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) * 100.0 / 
+              NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0)
+              AS numeric
+            ),
             2
           ),
           0
@@ -60,8 +66,11 @@ export async function GET() {
         
         COALESCE(
           ROUND(
-            COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) / 
-            NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END), 0),
+            CAST(
+              COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) / 
+              NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END), 0)
+              AS numeric
+            ),
             2
           ),
           0
