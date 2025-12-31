@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
+    console.log('[GET /api/campaigns] User ID:', user.id);
+
     const campaigns = await db.campaign.findMany({
       where: { userId: user.id },
       include: {
@@ -30,6 +32,8 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    console.log('[GET /api/campaigns] Found campaigns:', campaigns.length);
 
     return NextResponse.json({ campaigns });
   } catch (error: any) {
