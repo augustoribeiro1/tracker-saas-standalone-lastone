@@ -120,32 +120,56 @@ export default function CampaignAnalyticsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {data.metrics.map((metric: any, idx: number) => (
-                <tr key={metric.variation_id} className={idx === 0 ? 'bg-green-50' : ''}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {metric.variation_name}
-                    {idx === 0 && <span className="ml-2 text-xs text-green-600">🏆 Melhor</span>}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                    {parseInt(metric.views || 0).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                    {parseInt(metric.checkouts || 0).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                    {parseFloat(metric.checkout_rate || 0).toFixed(2)}%
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                    {parseInt(metric.purchases || 0).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                    {parseFloat(metric.purchase_rate || 0).toFixed(2)}%
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                    {formatCurrency(parseFloat(metric.revenue || 0))}
-                  </td>
-                </tr>
-              ))}
+              {(() => {
+                // Calcular qual variação tem melhor taxa de compras
+                const totalPurchases = data.metrics.reduce((sum: number, m: any) => sum + parseInt(m.purchases || 0), 0);
+                const hasPurchases = totalPurchases > 0;
+                
+                let bestVariationId = null;
+                let bestPurchaseRate = -1;
+                
+                if (hasPurchases) {
+                  data.metrics.forEach((m: any) => {
+                    const rate = parseFloat(m.purchase_rate || 0);
+                    const purchases = parseInt(m.purchases || 0);
+                    if (purchases > 0 && rate > bestPurchaseRate) {
+                      bestPurchaseRate = rate;
+                      bestVariationId = m.variation_id;
+                    }
+                  });
+                }
+                
+                return data.metrics.map((metric: any) => {
+                  const isBest = hasPurchases && metric.variation_id === bestVariationId;
+                  
+                  return (
+                    <tr key={metric.variation_id} className={isBest ? 'bg-green-50' : ''}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {metric.variation_name}
+                        {isBest && <span className="ml-2 text-xs text-green-600">🏆 Melhor</span>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                        {parseInt(metric.views || 0).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                        {parseInt(metric.checkouts || 0).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                        {parseFloat(metric.checkout_rate || 0).toFixed(2)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                        {parseInt(metric.purchases || 0).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                        {parseFloat(metric.purchase_rate || 0).toFixed(2)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                        {formatCurrency(parseFloat(metric.revenue || 0))}
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>
@@ -155,19 +179,17 @@ export default function CampaignAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Timeline */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Performance ao Longo do Tempo</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Views ao Longo do Tempo</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data.timeline}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="views" stroke="#3B82F6" name="Views" />
-              <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conv. Secundária" />
-              <Line type="monotone" dataKey="purchases" stroke="#F59E0B" name="Compras" />
+              <Line type="monotone" dataKey="views" stroke="#3B82F6" name="Views" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
+          <p className="text-xs text-gray-500 mt-2">Total de views (todas variações)</p>
         </div>
 
         {/* Distribuição de Views por Variação */}
@@ -198,30 +220,40 @@ export default function CampaignAnalyticsPage() {
       {/* Funil de Conversão */}
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Funil de Conversão</h2>
-        <div className="space-y-4">
+        <div className="space-y-6">
           {data.metrics.map((metric: any) => {
             const views = parseInt(metric.views || 0);
             const checkouts = parseInt(metric.checkouts || 0);
             const purchases = parseInt(metric.purchases || 0);
             
+            const checkoutPercent = views > 0 ? (checkouts / views * 100) : 0;
+            const purchasePercent = views > 0 ? (purchases / views * 100) : 0;
+            
             return (
               <div key={metric.variation_id}>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">{metric.variation_name}</h3>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <div className="h-8 bg-blue-500 rounded" style={{ width: '100%' }}>
-                      <span className="text-xs text-white px-2 leading-8">Views: {views}</span>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">{metric.variation_name}</h3>
+                <div className="space-y-2">
+                  {/* Views */}
+                  <div className="relative">
+                    <div className="h-10 bg-blue-500 rounded flex items-center px-3" style={{ width: '100%' }}>
+                      <span className="text-sm font-medium text-white">Views: {views}</span>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="h-8 bg-green-500 rounded" style={{ width: `${checkouts / views * 100}%` }}>
-                      <span className="text-xs text-white px-2 leading-8">Conv. Sec.: {checkouts}</span>
+                  
+                  {/* Conv. Secundária */}
+                  <div className="relative">
+                    <div className="h-10 bg-green-500 rounded flex items-center px-3" style={{ width: `${Math.max(checkoutPercent, 15)}%` }}>
+                      <span className="text-sm font-medium text-white">Conv. Sec.: {checkouts}</span>
                     </div>
+                    <span className="text-xs text-gray-500 ml-2">{checkoutPercent.toFixed(1)}%</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="h-8 bg-orange-500 rounded" style={{ width: `${purchases / views * 100}%` }}>
-                      <span className="text-xs text-white px-2 leading-8">Compras: {purchases}</span>
+                  
+                  {/* Compras */}
+                  <div className="relative">
+                    <div className="h-10 bg-orange-500 rounded flex items-center px-3" style={{ width: `${Math.max(purchasePercent, 15)}%` }}>
+                      <span className="text-sm font-medium text-white">Compras: {purchases}</span>
                     </div>
+                    <span className="text-xs text-gray-500 ml-2">{purchasePercent.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
