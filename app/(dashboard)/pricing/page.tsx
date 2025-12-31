@@ -71,7 +71,7 @@ export default function PricingPage() {
       {loading ? (
         <div className="text-center">Carregando planos...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto px-4 sm:px-0">
           {plans.map((plan) => {
             const price = billingInterval === 'monthly' 
               ? parseFloat(plan.monthlyPrice) 
@@ -87,7 +87,7 @@ export default function PricingPage() {
                   plan.popular 
                     ? 'border-blue-500 shadow-xl' 
                     : 'border-gray-200'
-                } bg-white p-8 ${plan.popular ? 'scale-105' : ''}`}
+                } bg-white p-6 sm:p-8 ${plan.popular ? 'lg:scale-105' : ''}`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">

@@ -63,19 +63,35 @@ export default function CampaignAnalyticsPage() {
           <h1 className="text-2xl font-semibold text-gray-900">{data.campaign.name}</h1>
           <p className="mt-1 text-sm text-gray-500">Analytics e Performance</p>
         </div>
-        <div className="mt-4 sm:mt-0 flex gap-2">
-          <input
-            type="date"
-            value={dateRange.start}
-            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-            className="rounded-md border-2 border-gray-300 shadow-sm text-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-            className="rounded-md border-2 border-gray-300 shadow-sm text-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
+          {/* Botão Editar */}
+          <a
+            href={`/campaigns/${params.id}/edit`}
+            className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            ✏️ Editar Campanha
+          </a>
+          {/* Datas com labels */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-600 mb-1">Data Inicial</label>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                className="rounded-md border-2 border-gray-300 shadow-sm text-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-600 mb-1">Data Final</label>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                className="rounded-md border-2 border-gray-300 shadow-sm text-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

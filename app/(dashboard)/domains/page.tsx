@@ -85,6 +85,16 @@ export default function DomainsPage() {
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'Ativo';
+      case 'pending': return 'Pendente';
+      case 'verifying': return 'Verificando';
+      case 'failed': return 'Falhou';
+      default: return status;
+    }
+  };
+
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
       <div>
@@ -151,27 +161,25 @@ export default function DomainsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(domain.status)}`}>
-                      {domain.status}
+                      {getStatusText(domain.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {domain.dnsConfigured ? '✅ Configurado' : '⏳ Pendente'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-4">
                     <button
                       onClick={() => setShowInstructions(domain)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900"
                     >
                       Ver Instruções
                     </button>
-                    {!domain.dnsConfigured && (
-                      <button
-                        onClick={() => verifyDomain(domain.id)}
-                        className="text-green-600 hover:text-green-900 mr-4"
-                      >
-                        Verificar DNS
-                      </button>
-                    )}
+                    <button
+                      onClick={() => verifyDomain(domain.id)}
+                      className="text-green-600 hover:text-green-900"
+                    >
+                      {domain.dnsConfigured ? 'Verificar' : 'Verificar DNS'}
+                    </button>
                     <button
                       onClick={() => deleteDomain(domain.id)}
                       className="text-red-600 hover:text-red-900"

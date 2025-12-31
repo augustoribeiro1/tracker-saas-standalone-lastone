@@ -56,7 +56,7 @@ export async function POST(
       data: {
         dnsConfigured,
         dnsVerifiedAt: dnsConfigured ? new Date() : null,
-        status: dnsConfigured ? 'verifying' : 'pending',
+        status: dnsConfigured ? 'active' : 'pending',  // ← MUDADO: active quando DNS OK
         lastCheckedAt: new Date(),
       }
     });
@@ -65,7 +65,7 @@ export async function POST(
       success: dnsConfigured,
       domain: updatedDomain,
       message: dnsConfigured 
-        ? 'DNS configurado corretamente! O SSL será provisionado em breve.'
+        ? 'DNS configurado corretamente! Domínio ativo.'
         : 'DNS ainda não configurado. Aguarde alguns minutos após configurar e tente novamente.'
     });
 
