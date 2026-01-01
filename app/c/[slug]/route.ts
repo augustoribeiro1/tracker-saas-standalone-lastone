@@ -8,7 +8,12 @@ export async function GET(
 ) {
   const { slug } = params;
   const searchParams = request.nextUrl.searchParams;
-  const requestHost = request.headers.get('host') || '';
+  
+  // Pegar hostname do Worker (X-Forwarded-Host) ou do request direto
+  const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('x-original-host');
+  const requestHost = forwardedHost || request.headers.get('host') || '';
+  
+  console.log('[/c] Request host:', requestHost, 'Forwarded:', forwardedHost);
   
   try {
     // 1. Buscar campanha pelo slug E domínio
