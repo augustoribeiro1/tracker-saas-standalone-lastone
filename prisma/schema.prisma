@@ -81,7 +81,7 @@ model Campaign {
   updatedAt                DateTime @updatedAt
   
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  customDomain CustomDomain? @relation(fields: [customDomainId], references: [id])
+  customDomain CustomDomain? @relation(fields: [customDomainId], references: [id], onDelete: SetNull)
   variations   Variation[]
   events       Event[]
   
@@ -162,19 +162,30 @@ model CustomDomain {
   id              Int       @id @default(autoincrement())
   userId          Int
   domain          String    @unique
-  status          String    @default("pending")
+  status          String    @default("pending") // pending, active, failed
+  dnsConfigured   Boolean   @default(false)
+  
+  // Campos Vercel (mantidos para compatibilidade)
   vercelConfigured Boolean  @default(false)
   vercelDnsTarget  String?
-  dnsConfigured   Boolean   @default(false)
   dnsVerifiedAt   DateTime?
-  sslStatus       String    @default("pending")
   sslIssuedAt     DateTime?
   lastCheckedAt   DateTime?
+  
+  // Cloudflare for SaaS (NOVOS)
+  cloudflareHostnameId  String?  @unique
+  sslStatus             String   @default("pending") // pending_validation, pending_issuance, pending_deployment, active
+  verificationToken     String?  @db.Text
+  verificationName      String?
+  
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campaigns Campaign[] // Campanhas que usam este domínio
+  campaigns Campaign[]
+  
+  @@index([userId])
+  @@index([status])
 }
 
 model Plan {
