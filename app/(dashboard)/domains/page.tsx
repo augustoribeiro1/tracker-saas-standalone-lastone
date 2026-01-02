@@ -14,7 +14,8 @@ export default function DomainsPage() {
   }, []);
 
   const fetchDomains = async () => {
-    const res = await fetch('/api/domains');
+    // ✅ CORRIGIDO: Usar API nova do Cloudflare
+    const res = await fetch('/api/domains/list');
     const data = await res.json();
     setDomains(data.domains || []);
     setLoading(false);
@@ -23,7 +24,8 @@ export default function DomainsPage() {
   const addDomain = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const res = await fetch('/api/domains', {
+    // ✅ CORRIGIDO: Usar API nova do Cloudflare
+    const res = await fetch('/api/domains/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain: newDomain })
@@ -32,7 +34,13 @@ export default function DomainsPage() {
     if (res.ok) {
       const data = await res.json();
       setNewDomain('');
-      setShowInstructions(data.domain);
+      
+      // ✅ Mostrar instruções DNS da resposta da API
+      setShowInstructions({
+        ...data.domain,
+        dnsInstructions: data.dnsInstructions
+      });
+      
       fetchDomains();
     } else {
       const error = await res.json();
@@ -41,37 +49,39 @@ export default function DomainsPage() {
   };
 
   const verifyDomain = async (domainId: number) => {
-    const res = await fetch(`/api/domains/verify/${domainId}`, {
-      method: 'POST'
+    // ✅ CORRIGIDO: Usar API nova do Cloudflare
+    const res = await fetch(`/api/domains/verify?domainId=${domainId}`, {
+      method: 'GET'
     });
 
     const data = await res.json();
+    
     if (data.success) {
-      alert('DNS configurado corretamente! ✅');
+      if (data.domain.isActive) {
+        alert('✅ DNS configurado e domínio ativo!');
+      } else {
+        alert(`⏳ Status: ${data.message}\n\nAguarde alguns minutos e tente novamente.`);
+      }
       fetchDomains();
     } else {
-      alert('DNS ainda não configurado. Aguarde alguns minutos e tente novamente.');
+      alert('Erro ao verificar DNS. Tente novamente.');
     }
   };
 
   const deleteDomain = async (domainId: number) => {
     if (!confirm('Tem certeza que deseja deletar este domínio?')) return;
     
-    await fetch(`/api/domains?id=${domainId}`, { method: 'DELETE' });
-    fetchDomains();
-  };
-
-  const fixOldDomains = async () => {
-    if (!confirm('Isso vai buscar o DNS correto de todos os domínios antigos. Continuar?')) return;
+    // ✅ CORRIGIDO: Usar API nova do Cloudflare
+    const res = await fetch(`/api/domains/delete?domainId=${domainId}`, {
+      method: 'DELETE'
+    });
     
-    const res = await fetch('/api/domains/fix-dns');
-    const data = await res.json();
-    
-    if (data.updated > 0) {
-      alert(`✅ ${data.updated} domínio(s) corrigido(s)!`);
+    if (res.ok) {
+      alert('✅ Domínio deletado!');
       fetchDomains();
     } else {
-      alert(data.message || 'Nenhum domínio precisava ser corrigido');
+      const error = await res.json();
+      alert(error.error || 'Erro ao deletar domínio');
     }
   };
 
@@ -191,7 +201,9 @@ export default function DomainsPage() {
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Configurar DNS - {showInstructions.domain}</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Configurar DNS - {showInstructions.domain}
+              </h3>
             </div>
 
             <div className="p-6 space-y-4">
@@ -204,7 +216,11 @@ export default function DomainsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="font-medium text-gray-900">Nome:</div>
-                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">{showInstructions.domain}</code></div>
+                    <div>
+                      <code className="bg-white px-2 py-1 rounded text-gray-900">
+                        {showInstructions.domain.split('.')[0]}
+                      </code>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="font-medium text-gray-900">Valor:</div>
@@ -214,12 +230,21 @@ export default function DomainsPage() {
                       </code>
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="font-medium text-gray-900">TTL:</div>
+                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">Auto ou 300</code></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="font-medium text-gray-900">Proxy:</div>
+                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">OFF / Nuvem Cinza</code></div>
+                  </div>
                 </div>
               </div>
 
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <p className="text-sm text-yellow-800">
-                  ⏰ <strong>Atenção:</strong> A propagação DNS pode levar de 5 minutos até 48 horas. Aguarde alguns minutos e clique em "Verificar DNS".
+                  ⏰ <strong>Atenção:</strong> A propagação DNS pode levar de 5 minutos até 48 horas. 
+                  Aguarde alguns minutos e clique em "Verificar DNS".
                 </p>
               </div>
 
