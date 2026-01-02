@@ -63,17 +63,25 @@ export async function GET(
     }
 
     // ✅ URL de checkout (usar campos que existem no schema)
-    const checkoutUrl = (campaign as any).checkoutUrl || 
-                       (campaign as any).url || 
-                       (campaign as any).targetUrl ||
-                       '/';
+    let checkoutUrl = (campaign as any).checkoutUrl || 
+                      (campaign as any).url || 
+                      (campaign as any).targetUrl ||
+                      null;
 
-    if (!checkoutUrl || checkoutUrl === '/') {
+    if (!checkoutUrl) {
       console.log('[/c] No checkout URL configured:', campaign.id);
       return NextResponse.json(
-        { error: 'Checkout not configured' },
+        { 
+          error: 'Checkout not configured',
+          campaignId: campaign.id 
+        },
         { status: 404 }
       );
+    }
+
+    // ✅ Garantir que URL é absoluta
+    if (!checkoutUrl.startsWith('http://') && !checkoutUrl.startsWith('https://')) {
+      checkoutUrl = 'https://' + checkoutUrl;
     }
 
     console.log('[/c] Redirecting to checkout:', checkoutUrl);

@@ -64,12 +64,30 @@ export async function GET(
     }
 
     // ✅ Determinar URL de destino (usar campos que existem no schema)
-    // Assumindo que Campaign tem campo 'url' ou similar
-    // Ajustar conforme seu schema real
-    const destinationUrl = (campaign as any).url || 
-                          (campaign as any).targetUrl || 
-                          (campaign as any).destinationUrl ||
-                          '/';
+    // Verificar vários campos possíveis
+    let destinationUrl = (campaign as any).url || 
+                         (campaign as any).targetUrl || 
+                         (campaign as any).destinationUrl ||
+                         (campaign as any).variationAUrl ||
+                         null;
+
+    // ✅ Se não tem URL configurada, retornar erro claro
+    if (!destinationUrl) {
+      console.log('[/r] No destination URL configured for campaign:', campaign.id);
+      return NextResponse.json(
+        { 
+          error: 'Campaign destination not configured',
+          campaignId: campaign.id,
+          slug: campaign.slug
+        },
+        { status: 404 }
+      );
+    }
+
+    // ✅ Garantir que URL é absoluta (NextResponse.redirect exige)
+    if (!destinationUrl.startsWith('http://') && !destinationUrl.startsWith('https://')) {
+      destinationUrl = 'https://' + destinationUrl;
+    }
 
     console.log('[/r] Redirecting to:', destinationUrl);
 
