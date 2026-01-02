@@ -28,7 +28,8 @@ export async function GET(
           include: {
             customDomains: true
           }
-        }
+        },
+        variations: true  // ✅ INCLUIR VARIATIONS!
       }
     });
 
@@ -63,22 +64,32 @@ export async function GET(
       console.log('[/r] Valid custom domain:', customDomain);
     }
 
-    // ✅ Determinar URL de destino (usar campos que existem no schema)
-    // Verificar vários campos possíveis
-    let destinationUrl = (campaign as any).url || 
-                         (campaign as any).targetUrl || 
-                         (campaign as any).destinationUrl ||
-                         (campaign as any).variationAUrl ||
-                         null;
-
-    // ✅ Se não tem URL configurada, retornar erro claro
-    if (!destinationUrl) {
-      console.log('[/r] No destination URL configured for campaign:', campaign.id);
+    // ✅ Determinar URL de destino das VARIATIONS (A/B test)
+    if (!campaign.variations || campaign.variations.length === 0) {
+      console.log('[/r] No variations configured for campaign:', campaign.id);
       return NextResponse.json(
         { 
-          error: 'Campaign destination not configured',
+          error: 'Campaign variations not configured',
           campaignId: campaign.id,
           slug: campaign.slug
+        },
+        { status: 404 }
+      );
+    }
+
+    // ✅ Selecionar variação (por enquanto, primeira disponível)
+    // TODO: Implementar distribuição A/B test
+    const variation = campaign.variations[0];
+    let destinationUrl = variation.destinationUrl;
+
+    // ✅ Verificar se variation tem URL
+    if (!destinationUrl) {
+      console.log('[/r] Variation has no destination URL:', variation.id);
+      return NextResponse.json(
+        { 
+          error: 'Variation destination not configured',
+          campaignId: campaign.id,
+          variationId: variation.id
         },
         { status: 404 }
       );
@@ -89,7 +100,7 @@ export async function GET(
       destinationUrl = 'https://' + destinationUrl;
     }
 
-    console.log('[/r] Redirecting to:', destinationUrl);
+    console.log('[/r] Redirecting to:', destinationUrl, '(Variation:', variation.id + ')');
 
     // Fazer redirect
     return NextResponse.redirect(destinationUrl, {

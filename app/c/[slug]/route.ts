@@ -28,7 +28,8 @@ export async function GET(
           include: {
             customDomains: true
           }
-        }
+        },
+        variations: true  // ✅ INCLUIR VARIATIONS!
       }
     });
 
@@ -62,18 +63,31 @@ export async function GET(
       console.log('[/c] Valid custom domain:', customDomain);
     }
 
-    // ✅ URL de checkout (usar campos que existem no schema)
-    let checkoutUrl = (campaign as any).checkoutUrl || 
-                      (campaign as any).url || 
-                      (campaign as any).targetUrl ||
-                      null;
+    // ✅ URL de checkout das variations
+    if (!campaign.variations || campaign.variations.length === 0) {
+      console.log('[/c] No variations configured:', campaign.id);
+      return NextResponse.json(
+        { 
+          error: 'Campaign variations not configured',
+          campaignId: campaign.id 
+        },
+        { status: 404 }
+      );
+    }
+
+    // Selecionar variation (primeira disponível)
+    const variation = campaign.variations[0];
+    
+    // Tentar checkoutUrl primeiro, senão destinationUrl
+    let checkoutUrl = (variation as any).checkoutUrl || variation.destinationUrl;
 
     if (!checkoutUrl) {
-      console.log('[/c] No checkout URL configured:', campaign.id);
+      console.log('[/c] No checkout URL configured:', variation.id);
       return NextResponse.json(
         { 
           error: 'Checkout not configured',
-          campaignId: campaign.id 
+          campaignId: campaign.id,
+          variationId: variation.id
         },
         { status: 404 }
       );
@@ -84,7 +98,7 @@ export async function GET(
       checkoutUrl = 'https://' + checkoutUrl;
     }
 
-    console.log('[/c] Redirecting to checkout:', checkoutUrl);
+    console.log('[/c] Redirecting to checkout:', checkoutUrl, '(Variation:', variation.id + ')');
 
     // Redirect para checkout
     return NextResponse.redirect(checkoutUrl, {
