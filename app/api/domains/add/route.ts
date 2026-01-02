@@ -108,7 +108,13 @@ export async function POST(request: NextRequest) {
 
     console.log('[Add Domain] Domain added successfully:', customDomain.id);
 
-    // 9. Retornar sucesso com instruções DNS
+    // 9. Extrair subdomain (primeiro nível)
+    // Ex: track.cliente.com → "track"
+    //     click.trylegfix.com → "click"
+    const subdomainParts = cleanDomain.split('.');
+    const subdomain = subdomainParts[0];
+
+    // 10. Retornar sucesso com instruções DNS CORRETAS
     return NextResponse.json({
       success: true,
       domain: {
@@ -120,11 +126,12 @@ export async function POST(request: NextRequest) {
       dnsInstructions: {
         message: 'Configure o DNS do seu domínio com as informações abaixo:',
         type: 'CNAME',
-        name: cleanDomain.split('.')[0], // Subdomain (ex: "track" de "track.cliente.com")
-        value: cfResult.httpUrl || `${cleanDomain}.cdn.cloudflare.net`,
+        name: subdomain, // Ex: "track" ou "click"
+        value: 'split2.com.br', // ✅ CORRETO! Aponta para seu domínio principal
         ttl: 'Auto ou 300',
-        proxy: 'Desativado (DNS only)',
-        note: 'Após configurar o DNS, clique em "Verificar DNS" para ativar o domínio.',
+        proxy: 'Desativado (DNS only / nuvem cinza)',
+        note: 'Após configurar o DNS, aguarde 5-10 minutos e clique em "Verificar DNS" para ativar o domínio. A propagação pode levar até 48 horas.',
+        warning: 'IMPORTANTE: No seu provedor de DNS, certifique-se de que o Proxy está DESATIVADO (nuvem cinza no Cloudflare).',
       },
     });
 
