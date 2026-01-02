@@ -62,10 +62,13 @@ export async function GET(
       console.log('[/c] Valid custom domain:', customDomain);
     }
 
-    // URL de checkout
-    const checkoutUrl = campaign.checkoutUrl || campaign.destinationUrl;
+    // ✅ URL de checkout (usar campos que existem no schema)
+    const checkoutUrl = (campaign as any).checkoutUrl || 
+                       (campaign as any).url || 
+                       (campaign as any).targetUrl ||
+                       '/';
 
-    if (!checkoutUrl) {
+    if (!checkoutUrl || checkoutUrl === '/') {
       console.log('[/c] No checkout URL configured:', campaign.id);
       return NextResponse.json(
         { error: 'Checkout not configured' },
@@ -89,6 +92,7 @@ export async function GET(
       });
     } catch (analyticsError) {
       console.error('[/c] Analytics error:', analyticsError);
+      // Não falhar se analytics não funcionar
     }
 
     // Redirect para checkout

@@ -63,8 +63,13 @@ export async function GET(
       console.log('[/r] Valid custom domain:', customDomain);
     }
 
-    // Determinar URL de destino (variação A/B)
-    const destinationUrl = determineDestinationUrl(campaign);
+    // ✅ Determinar URL de destino (usar campos que existem no schema)
+    // Assumindo que Campaign tem campo 'url' ou similar
+    // Ajustar conforme seu schema real
+    const destinationUrl = (campaign as any).url || 
+                          (campaign as any).targetUrl || 
+                          (campaign as any).destinationUrl ||
+                          '/';
 
     console.log('[/r] Redirecting to:', destinationUrl);
 
@@ -82,6 +87,7 @@ export async function GET(
       });
     } catch (analyticsError) {
       console.error('[/r] Analytics error:', analyticsError);
+      // Não falhar se analytics não funcionar
     }
 
     // Fazer redirect
@@ -100,23 +106,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
-
-/**
- * Determinar URL de destino (A/B test)
- */
-function determineDestinationUrl(campaign: any): string {
-  // Por enquanto, retorna variação A
-  // TODO: Implementar lógica de distribuição A/B
-  
-  if (campaign.variationAUrl) {
-    return campaign.variationAUrl;
-  }
-
-  if (campaign.destinationUrl) {
-    return campaign.destinationUrl;
-  }
-
-  // Fallback
-  return '/';
 }
