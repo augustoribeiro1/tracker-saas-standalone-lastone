@@ -210,7 +210,7 @@ export default function DomainsPage() {
                     <div className="font-medium text-gray-900">Valor:</div>
                     <div>
                       <code className="bg-white px-2 py-1 rounded text-gray-900">
-                        cname.vercel-dns.com
+                        split2.com.br
                       </code>
                     </div>
                   </div>
