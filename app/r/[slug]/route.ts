@@ -73,23 +73,6 @@ export async function GET(
 
     console.log('[/r] Redirecting to:', destinationUrl);
 
-    // Analytics (opcional - pode falhar sem quebrar)
-    try {
-      await db.analytics.create({
-        data: {
-          campaignId: campaign.id,
-          eventType: 'click',
-          domain: customDomain || 'app.split2.com.br',
-          path: `/r/${slug}`,
-          userAgent: request.headers.get('user-agent') || '',
-          referer: request.headers.get('referer') || null
-        }
-      });
-    } catch (analyticsError) {
-      console.error('[/r] Analytics error:', analyticsError);
-      // Não falhar se analytics não funcionar
-    }
-
     // Fazer redirect
     return NextResponse.redirect(destinationUrl, {
       status: 302,

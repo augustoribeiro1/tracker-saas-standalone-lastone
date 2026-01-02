@@ -78,23 +78,6 @@ export async function GET(
 
     console.log('[/c] Redirecting to checkout:', checkoutUrl);
 
-    // Analytics (registrar conversão)
-    try {
-      await db.analytics.create({
-        data: {
-          campaignId: campaign.id,
-          eventType: 'conversion',
-          domain: customDomain || 'app.split2.com.br',
-          path: `/c/${slug}`,
-          userAgent: request.headers.get('user-agent') || '',
-          referer: request.headers.get('referer') || null
-        }
-      });
-    } catch (analyticsError) {
-      console.error('[/c] Analytics error:', analyticsError);
-      // Não falhar se analytics não funcionar
-    }
-
     // Redirect para checkout
     return NextResponse.redirect(checkoutUrl, {
       status: 302,
