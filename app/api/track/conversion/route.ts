@@ -3,7 +3,6 @@ import { db } from '@/lib/db';
 
 /**
  * API /api/track/conversion
- * Chamada pelo Worker ao acessar /c/
  * Registra conversão no banco
  */
 export async function POST(request: NextRequest) {
@@ -34,6 +33,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!campaign) {
+      console.log('[/api/track/conversion] Campaign not found:', slug);
       return NextResponse.json(
         { error: 'Campaign not found' },
         { status: 404 }
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!campaign.variations || campaign.variations.length === 0) {
+      console.log('[/api/track/conversion] No variations:', campaign.id);
       return NextResponse.json(
         { error: 'No variations configured' },
         { status: 404 }
@@ -48,19 +49,25 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ BUSCAR CLICK ORIGINAL (se tiver clickid)
-    let variationId = campaign.variations[0].id; // Default: primeira variation
+    let variationId = campaign.variations[0].id;
 
     if (clickid) {
-      const originalClick = await db.click.findFirst({
-        where: {
-          clickid: clickid,
-          campaignId: campaign.id
-        }
-      });
+      try {
+        const originalClick = await db.click.findFirst({
+          where: {
+            clickid: clickid,
+            campaignId: campaign.id
+          }
+        });
 
-      if (originalClick) {
-        variationId = originalClick.variationId;
-        console.log('[/api/track/conversion] Found original click, variation:', variationId);
+        if (originalClick) {
+          variationId = originalClick.variationId;
+          console.log('[/api/track/conversion] Found original click! Variation:', variationId);
+        } else {
+          console.log('[/api/track/conversion] Click not found for clickid:', clickid);
+        }
+      } catch (clickError) {
+        console.log('[/api/track/conversion] Error finding click:', clickError.message);
       }
     }
 
@@ -70,6 +77,7 @@ export async function POST(request: NextRequest) {
     let checkoutUrl = (variation as any).checkoutUrl || variation.destinationUrl;
 
     if (!checkoutUrl) {
+      console.log('[/api/track/conversion] No checkout URL:', variation.id);
       return NextResponse.json(
         { error: 'Checkout not configured' },
         { status: 404 }
@@ -80,6 +88,8 @@ export async function POST(request: NextRequest) {
     if (!checkoutUrl.startsWith('http://') && !checkoutUrl.startsWith('https://')) {
       checkoutUrl = 'https://' + checkoutUrl;
     }
+
+    console.log('[/api/track/conversion] Checkout URL:', checkoutUrl);
 
     // ✅ REGISTRAR CONVERSÃO
     try {
@@ -94,14 +104,10 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('[/api/track/conversion] Conversion recorded:', {
-        campaignId: campaign.id,
-        variationId: variationId,
-        clickid: clickid
-      });
-    } catch (error) {
-      console.error('[/api/track/conversion] Database error:', error);
-      // Não falhar se analytics não funcionar
+      console.log('[/api/track/conversion] Conversion recorded! Campaign:', campaign.id, 'Variation:', variationId);
+    } catch (dbError) {
+      console.error('[/api/track/conversion] Database error:', dbError);
+      // Não falhar se analytics der erro
     }
 
     // ✅ RETORNAR URL DE CHECKOUT

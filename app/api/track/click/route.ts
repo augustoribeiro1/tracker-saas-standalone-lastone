@@ -4,15 +4,13 @@ import { nanoid } from 'nanoid';
 
 /**
  * API /api/track/click
- * Chamada pelo Worker ANTES de fazer proxy
- * Registra analytics + seleciona variation + gera clickid
+ * Registra click + seleciona variation + gera clickid
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { slug, domain } = body;
 
-    // Validar parâmetros
     if (!slug) {
       return NextResponse.json(
         { error: 'Missing slug' },
@@ -41,19 +39,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (!campaign) {
+      console.log('[/api/track/click] Campaign not found:', slug);
       return NextResponse.json(
         { error: 'Campaign not found' },
         { status: 404 }
       );
     }
 
-    // Validar custom domain se fornecido
+    // Validar custom domain
     if (customDomain && customDomain !== 'app.split2.com.br') {
       const isValidDomain = campaign.user.customDomains.some(
         d => d.domain === customDomain && d.status === 'active'
       );
 
       if (!isValidDomain) {
+        console.log('[/api/track/click] Invalid domain:', customDomain);
         return NextResponse.json(
           { error: 'Invalid custom domain' },
           { status: 403 }
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar variations
     if (!campaign.variations || campaign.variations.length === 0) {
+      console.log('[/api/track/click] No variations:', campaign.id);
       return NextResponse.json(
         { error: 'No variations configured' },
         { status: 404 }
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
     const variation = selectVariation(campaign.variations);
 
     if (!variation.destinationUrl) {
+      console.log('[/api/track/click] No destination URL:', variation.id);
       return NextResponse.json(
         { error: 'Variation has no destination URL' },
         { status: 404 }
@@ -80,9 +82,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ GERAR CLICKID ÚNICO
-    const clickid = nanoid(16); // Gera ID único de 16 caracteres
+    const clickid = nanoid(16);
 
-    // ✅ REGISTRAR ANALYTICS (CLICK)
+    console.log('[/api/track/click] Selected variation:', variation.id, 'Traffic:', variation.trafficPercentage + '%', 'Clickid:', clickid);
+
+    // ✅ REGISTRAR ANALYTICS
     try {
       await db.click.create({
         data: {
@@ -95,17 +99,13 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('[/api/track/click] Analytics recorded:', {
-        campaignId: campaign.id,
-        variationId: variation.id,
-        clickid
-      });
-    } catch (error) {
-      console.error('[/api/track/click] Analytics error:', error);
-      // Não falhar se analytics não funcionar
+      console.log('[/api/track/click] Analytics recorded! Campaign:', campaign.id, 'Variation:', variation.id);
+    } catch (dbError) {
+      console.error('[/api/track/click] Database error:', dbError);
+      // Não falhar se analytics der erro
     }
 
-    // ✅ RETORNAR DADOS PARA O WORKER
+    // ✅ RETORNAR DADOS
     return NextResponse.json({
       success: true,
       variation: {
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Selecionar variation baseada em distribuição de tráfego
+ * Selecionar variation baseada em distribuição
  */
 function selectVariation(variations: any[]): any {
   if (variations.length === 1) {
