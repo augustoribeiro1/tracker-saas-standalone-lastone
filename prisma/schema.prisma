@@ -84,6 +84,8 @@ model Campaign {
   customDomain CustomDomain? @relation(fields: [customDomainId], references: [id], onDelete: SetNull)
   variations   Variation[]
   events       Event[]
+  clicks          Click[]
+  conversions     Conversion[]
   
   @@unique([userId, slug])
   @@index([customDomainId])
@@ -100,6 +102,8 @@ model Variation {
   
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   events   Event[]
+  clicks          Click[]
+  conversions     Conversion[]
 }
 
 model Event {
@@ -243,4 +247,42 @@ model UsageRecord {
   updatedAt     DateTime @updatedAt
   
   @@unique([userId, year, month])
+}
+
+// =========================================
+// ANALYTICS TABLES
+// =========================================
+
+model Click {
+  id          Int       @id @default(autoincrement())
+  campaignId  Int
+  variationId Int
+  domain      String?
+  userAgent   String?
+  referer     String?
+  createdAt   DateTime  @default(now())
+  
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  variation   Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([variationId])
+  @@index([createdAt])
+}
+
+model Conversion {
+  id          Int       @id @default(autoincrement())
+  campaignId  Int
+  variationId Int
+  domain      String?
+  userAgent   String?
+  referer     String?
+  createdAt   DateTime  @default(now())
+  
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  variation   Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([variationId])
+  @@index([createdAt])
 }
