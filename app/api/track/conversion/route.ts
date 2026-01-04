@@ -67,8 +67,9 @@ export async function POST(request: NextRequest) {
           console.log('[/api/track/conversion] Click not found for clickid:', clickid);
         }
       } catch (clickError) {
-        console.log('[/api/track/conversion] Error finding click:', clickError.message);
-      }
+		const errorMessage = clickError instanceof Error ? clickError.message : String(clickError);
+		console.log('[/api/track/conversion] Error finding click:', errorMessage);
+		}
     }
 
     const variation = campaign.variations.find(v => v.id === variationId) || campaign.variations[0];
