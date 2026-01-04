@@ -63,7 +63,7 @@ export async function GET(
       console.log('[/c] Valid custom domain:', customDomain);
     }
 
-    // ✅ URL de checkout das variations
+    // ✅ Selecionar variation baseada em distribuição A/B
     if (!campaign.variations || campaign.variations.length === 0) {
       console.log('[/c] No variations configured:', campaign.id);
       return NextResponse.json(
@@ -75,8 +75,8 @@ export async function GET(
       );
     }
 
-    // Selecionar variation (primeira disponível)
-    const variation = campaign.variations[0];
+    // ✅ DISTRIBUIÇÃO A/B baseada em peso
+    const variation = selectVariation(campaign.variations);
     
     // Tentar checkoutUrl primeiro, senão destinationUrl
     let checkoutUrl = (variation as any).checkoutUrl || variation.destinationUrl;
@@ -98,13 +98,30 @@ export async function GET(
       checkoutUrl = 'https://' + checkoutUrl;
     }
 
-    console.log('[/c] Redirecting to checkout:', checkoutUrl, '(Variation:', variation.id + ')');
+    console.log('[/c] Selected variation:', variation.id, 'Traffic:', variation.trafficPercentage + '%');
+    console.log('[/c] Redirecting to checkout:', checkoutUrl);
+
+    // ✅ REGISTRAR ANALYTICS (Conversion)
+    try {
+      await db.$executeRaw`
+        INSERT INTO Conversion (campaignId, variationId, domain, userAgent, referer, createdAt)
+        VALUES (${campaign.id}, ${variation.id}, ${customDomain || 'app.split2.com.br'}, 
+                ${request.headers.get('user-agent') || ''}, 
+                ${request.headers.get('referer') || null}, 
+                ${new Date()})
+      `;
+      console.log('[/c] Analytics recorded: Conversion for variation', variation.id);
+    } catch (analyticsError) {
+      console.error('[/c] Analytics error:', analyticsError);
+      // Não falhar o redirect
+    }
 
     // Redirect para checkout
     return NextResponse.redirect(checkoutUrl, {
       status: 302,
       headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Split2-Variation': variation.id.toString()
       }
     });
 
@@ -116,4 +133,39 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+/**
+ * Selecionar variation baseada em distribuição de tráfego
+ */
+function selectVariation(variations: any[]): any {
+  // Se só tem 1 variation, retornar ela
+  if (variations.length === 1) {
+    return variations[0];
+  }
+
+  // ✅ Distribuição baseada em trafficPercentage (ou weight)
+  const totalPercentage = variations.reduce((sum, v) => {
+    return sum + (v.trafficPercentage || v.weight || 0);
+  }, 0);
+
+  // Se nenhuma tem percentage/weight, distribuir igualmente
+  if (totalPercentage === 0) {
+    const randomIndex = Math.floor(Math.random() * variations.length);
+    return variations[randomIndex];
+  }
+
+  // Selecionar baseado em peso acumulativo
+  const random = Math.random() * totalPercentage;
+  let cumulative = 0;
+
+  for (const variation of variations) {
+    cumulative += (variation.trafficPercentage || variation.weight || 0);
+    if (random <= cumulative) {
+      return variation;
+    }
+  }
+
+  // Fallback: retornar última
+  return variations[variations.length - 1];
 }

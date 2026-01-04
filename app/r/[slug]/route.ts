@@ -64,7 +64,7 @@ export async function GET(
       console.log('[/r] Valid custom domain:', customDomain);
     }
 
-    // ✅ Determinar URL de destino das VARIATIONS (A/B test)
+    // ✅ Determinar variation baseada em distribuição A/B
     if (!campaign.variations || campaign.variations.length === 0) {
       console.log('[/r] No variations configured for campaign:', campaign.id);
       return NextResponse.json(
@@ -77,9 +77,8 @@ export async function GET(
       );
     }
 
-    // ✅ Selecionar variação (por enquanto, primeira disponível)
-    // TODO: Implementar distribuição A/B test
-    const variation = campaign.variations[0];
+    // ✅ DISTRIBUIÇÃO A/B baseada em peso/proporção
+    const variation = selectVariation(campaign.variations);
     let destinationUrl = variation.destinationUrl;
 
     // ✅ Verificar se variation tem URL
@@ -95,18 +94,35 @@ export async function GET(
       );
     }
 
-    // ✅ Garantir que URL é absoluta (NextResponse.redirect exige)
+    // ✅ Garantir que URL é absoluta
     if (!destinationUrl.startsWith('http://') && !destinationUrl.startsWith('https://')) {
       destinationUrl = 'https://' + destinationUrl;
     }
 
-    console.log('[/r] Redirecting to:', destinationUrl, '(Variation:', variation.id + ')');
+    console.log('[/r] Selected variation:', variation.id, 'Traffic:', variation.trafficPercentage + '%');
+    console.log('[/r] Redirecting to:', destinationUrl);
+
+    // ✅ REGISTRAR ANALYTICS (Click/View)
+    try {
+      await db.$executeRaw`
+        INSERT INTO Click (campaignId, variationId, domain, userAgent, referer, createdAt)
+        VALUES (${campaign.id}, ${variation.id}, ${customDomain || 'app.split2.com.br'}, 
+                ${request.headers.get('user-agent') || ''}, 
+                ${request.headers.get('referer') || null}, 
+                ${new Date()})
+      `;
+      console.log('[/r] Analytics recorded: Click for variation', variation.id);
+    } catch (analyticsError) {
+      console.error('[/r] Analytics error:', analyticsError);
+      // Não falhar o redirect por erro de analytics
+    }
 
     // Fazer redirect
     return NextResponse.redirect(destinationUrl, {
       status: 302,
       headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Split2-Variation': variation.id.toString() // Header para tracking
       }
     });
 
@@ -118,4 +134,39 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+/**
+ * Selecionar variation baseada em distribuição de tráfego
+ */
+function selectVariation(variations: any[]): any {
+  // Se só tem 1 variation, retornar ela
+  if (variations.length === 1) {
+    return variations[0];
+  }
+
+  // ✅ Distribuição baseada em trafficPercentage (ou weight)
+  const totalPercentage = variations.reduce((sum, v) => {
+    return sum + (v.trafficPercentage || v.weight || 0);
+  }, 0);
+
+  // Se nenhuma tem percentage/weight, distribuir igualmente
+  if (totalPercentage === 0) {
+    const randomIndex = Math.floor(Math.random() * variations.length);
+    return variations[randomIndex];
+  }
+
+  // Selecionar baseado em peso acumulativo
+  const random = Math.random() * totalPercentage;
+  let cumulative = 0;
+
+  for (const variation of variations) {
+    cumulative += (variation.trafficPercentage || variation.weight || 0);
+    if (random <= cumulative) {
+      return variation;
+    }
+  }
+
+  // Fallback: retornar última
+  return variations[variations.length - 1];
 }

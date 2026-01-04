@@ -260,6 +260,7 @@ model Click {
   domain      String?
   userAgent   String?
   referer     String?
+  clickid     String?   @unique  
   createdAt   DateTime  @default(now())
   
   campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -268,6 +269,7 @@ model Click {
   @@index([campaignId])
   @@index([variationId])
   @@index([createdAt])
+  @@index([clickid])
 }
 
 model Conversion {
@@ -277,6 +279,7 @@ model Conversion {
   domain      String?
   userAgent   String?
   referer     String?
+  clickid     String?
   createdAt   DateTime  @default(now())
   
   campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -285,4 +288,5 @@ model Conversion {
   @@index([campaignId])
   @@index([variationId])
   @@index([createdAt])
+  @@index([clickid])
 }
