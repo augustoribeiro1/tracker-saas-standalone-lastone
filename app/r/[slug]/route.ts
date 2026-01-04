@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { slug } = params;
     
-    // ✅ CRÍTICO: Obter hostname do custom domain via headers
+    // Obter hostname do custom domain via headers
     const customDomain = 
       request.headers.get('x-forwarded-host') ||
       request.headers.get('x-custom-domain') ||
@@ -29,7 +29,7 @@ export async function GET(
             customDomains: true
           }
         },
-        variations: true  // ✅ INCLUIR VARIATIONS!
+        variations: true
       }
     });
 
@@ -41,7 +41,7 @@ export async function GET(
       );
     }
 
-    // ✅ CORREÇÃO: Se custom domain, validar se pertence ao usuário
+    // Validar custom domain se fornecido
     if (customDomain && customDomain !== 'app.split2.com.br') {
       const isValidDomain = campaign.user.customDomains.some(
         d => d.domain === customDomain && d.status === 'active'
@@ -64,7 +64,7 @@ export async function GET(
       console.log('[/r] Valid custom domain:', customDomain);
     }
 
-    // ✅ Determinar variation baseada em distribuição A/B
+    // Verificar variations
     if (!campaign.variations || campaign.variations.length === 0) {
       console.log('[/r] No variations configured for campaign:', campaign.id);
       return NextResponse.json(
@@ -77,11 +77,10 @@ export async function GET(
       );
     }
 
-    // ✅ DISTRIBUIÇÃO A/B baseada em peso/proporção
+    // Selecionar variation (A/B test)
     const variation = selectVariation(campaign.variations);
     let destinationUrl = variation.destinationUrl;
 
-    // ✅ Verificar se variation tem URL
     if (!destinationUrl) {
       console.log('[/r] Variation has no destination URL:', variation.id);
       return NextResponse.json(
@@ -94,7 +93,7 @@ export async function GET(
       );
     }
 
-    // ✅ Garantir que URL é absoluta
+    // Garantir que URL é absoluta
     if (!destinationUrl.startsWith('http://') && !destinationUrl.startsWith('https://')) {
       destinationUrl = 'https://' + destinationUrl;
     }
@@ -102,27 +101,14 @@ export async function GET(
     console.log('[/r] Selected variation:', variation.id, 'Traffic:', variation.trafficPercentage + '%');
     console.log('[/r] Redirecting to:', destinationUrl);
 
-    // ✅ REGISTRAR ANALYTICS (Click/View)
-    try {
-      await db.$executeRaw`
-        INSERT INTO Click (campaignId, variationId, domain, userAgent, referer, createdAt)
-        VALUES (${campaign.id}, ${variation.id}, ${customDomain || 'app.split2.com.br'}, 
-                ${request.headers.get('user-agent') || ''}, 
-                ${request.headers.get('referer') || null}, 
-                ${new Date()})
-      `;
-      console.log('[/r] Analytics recorded: Click for variation', variation.id);
-    } catch (analyticsError) {
-      console.error('[/r] Analytics error:', analyticsError);
-      // Não falhar o redirect por erro de analytics
-    }
+    // ⚠️ ANALYTICS REMOVIDO TEMPORARIAMENTE
+    // Para ativar analytics, use /api/track/click
 
     // Fazer redirect
     return NextResponse.redirect(destinationUrl, {
       status: 302,
       headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'X-Split2-Variation': variation.id.toString() // Header para tracking
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
     });
 
@@ -140,12 +126,11 @@ export async function GET(
  * Selecionar variation baseada em distribuição de tráfego
  */
 function selectVariation(variations: any[]): any {
-  // Se só tem 1 variation, retornar ela
   if (variations.length === 1) {
     return variations[0];
   }
 
-  // ✅ Distribuição baseada em trafficPercentage (ou weight)
+  // Distribuição baseada em trafficPercentage
   const totalPercentage = variations.reduce((sum, v) => {
     return sum + (v.trafficPercentage || v.weight || 0);
   }, 0);
@@ -167,6 +152,5 @@ function selectVariation(variations: any[]): any {
     }
   }
 
-  // Fallback: retornar última
   return variations[variations.length - 1];
 }
