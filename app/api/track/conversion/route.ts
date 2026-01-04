@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 /**
  * API /api/track/conversion
  * Registra conversão no banco
+ * Chamada pelo Worker ao acessar /c/
  */
 export async function POST(request: NextRequest) {
   try {
@@ -67,9 +68,9 @@ export async function POST(request: NextRequest) {
           console.log('[/api/track/conversion] Click not found for clickid:', clickid);
         }
       } catch (clickError) {
-		const errorMessage = clickError instanceof Error ? clickError.message : String(clickError);
-		console.log('[/api/track/conversion] Error finding click:', errorMessage);
-		}
+        const errorMessage = clickError instanceof Error ? clickError.message : String(clickError);
+        console.log('[/api/track/conversion] Error finding click:', errorMessage);
+      }
     }
 
     const variation = campaign.variations.find(v => v.id === variationId) || campaign.variations[0];
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('[/api/track/conversion] Conversion recorded! Campaign:', campaign.id, 'Variation:', variationId);
+      console.log('[/api/track/conversion] Conversion recorded! Campaign:', campaign.id, 'Variation:', variationId, 'Clickid:', clickid);
     } catch (dbError) {
       console.error('[/api/track/conversion] Database error:', dbError);
       // Não falhar se analytics der erro

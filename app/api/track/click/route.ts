@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 /**
  * API /api/track/click
  * Registra click + seleciona variation + gera clickid
+ * Chamada pelo Worker ANTES de fazer proxy
  */
 export async function POST(request: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     // ✅ GERAR CLICKID ÚNICO
     const clickid = nanoid(16);
 
-    console.log('[/api/track/click] Selected variation:', variation.id, 'Traffic:', variation.trafficPercentage + '%', 'Clickid:', clickid);
+    console.log('[/api/track/click] Selected variation:', variation.id, 'Traffic:', (variation.trafficPercentage || 'undefined') + '%', 'Clickid:', clickid);
 
     // ✅ REGISTRAR ANALYTICS
     try {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('[/api/track/click] Analytics recorded! Campaign:', campaign.id, 'Variation:', variation.id);
+      console.log('[/api/track/click] Analytics recorded! Campaign:', campaign.id, 'Variation:', variation.id, 'Clickid:', clickid);
     } catch (dbError) {
       console.error('[/api/track/click] Database error:', dbError);
       // Não falhar se analytics der erro
