@@ -108,28 +108,25 @@ export async function GET(
   console.log('[Analytics] Metrics fetched:', metrics.length, 'variations');
   console.log('[Analytics] Sample metric:', metrics[0]);
 
-  // ✅ BUSCAR DADOS DO FUNIL (SIMPLIFICADO - SÓ VIEWS E CONVERSÕES)
+  // ✅ BUSCAR DADOS DO FUNIL (CORRIGIDO - SEM AMBIGUIDADE)
   const funnelDataRaw = await db.$queryRaw`
-    WITH funnel_steps AS (
-      SELECT 
-        "variationId",
-        COUNT(DISTINCT c.id) as step_views,
-        0 as step_video_play,
-        0 as step_video_50,
-        0 as step_video_complete,
-        COUNT(DISTINCT co.id) as step_checkout,
-        0 as step_purchase
-      FROM "Variation" v
-      LEFT JOIN "Click" c ON v.id = c."variationId"
-        AND DATE(c."createdAt") >= DATE(${startDate}::timestamp)
-        AND DATE(c."createdAt") <= DATE(${endDate}::timestamp)
-      LEFT JOIN "Conversion" co ON v.id = co."variationId"
-        AND DATE(co."createdAt") >= DATE(${startDate}::timestamp)
-        AND DATE(co."createdAt") <= DATE(${endDate}::timestamp)
-      WHERE v."campaignId" = ${campaignId}
-      GROUP BY v.id
-    )
-    SELECT * FROM funnel_steps
+    SELECT 
+      v.id as "variationId",
+      COUNT(DISTINCT c.id) as step_views,
+      0 as step_video_play,
+      0 as step_video_50,
+      0 as step_video_complete,
+      COUNT(DISTINCT co.id) as step_checkout,
+      0 as step_purchase
+    FROM "Variation" v
+    LEFT JOIN "Click" c ON v.id = c."variationId"
+      AND DATE(c."createdAt") >= DATE(${startDate}::timestamp)
+      AND DATE(c."createdAt") <= DATE(${endDate}::timestamp)
+    LEFT JOIN "Conversion" co ON v.id = co."variationId"
+      AND DATE(co."createdAt") >= DATE(${startDate}::timestamp)
+      AND DATE(co."createdAt") <= DATE(${endDate}::timestamp)
+    WHERE v."campaignId" = ${campaignId}
+    GROUP BY v.id
   `;
   
   // Converter BigInt para Number
