@@ -26,13 +26,63 @@ export default function EditCampaignPage() {
   const totalWeight = formData.variations.reduce((sum, v) => sum + (v.weight || 0), 0);
   const isWeightValid = totalWeight === 100;
 
-  // Gerar URL completo para conversão secundária
+  // ✅ AJUSTE 2: Gerar URL completo da campanha
   const selectedDomain = domains.find(d => d.id.toString() === formData.customDomainId);
+  const fullUrl = selectedDomain && formData.slug
+    ? `https://${selectedDomain.domain}/r/${formData.slug}`
+    : '';
+
+  // Gerar URL completo para conversão secundária
   const conversionUrl = selectedDomain && formData.slug
     ? `https://${selectedDomain.domain}/c/${formData.slug}`
     : '';
 
-  // Copiar URL
+  // ✅ AJUSTE 1: Script de tracking para copiar
+  const trackingScript = `<script>
+(function() {
+     // ✅ 1. CAPTURAR utm_term INJETADO PELO SPLIT2
+     const injectedUtmTerm = window.__INJECTED_UTM_TERM || null;
+     
+     // ✅ 2. CAPTURAR UTMs DO TRÁFEGO (utm_source, utm_campaign, etc)
+     const trafficParams = new URLSearchParams(window.location.search);
+     
+     // ✅ 3. REMOVER utm_term DO TRÁFEGO (se existir)
+     trafficParams.delete('utm_term');
+     
+     // ✅ 4. SEMPRE USAR utm_term DO SPLIT2 (sobrescreve tráfego)
+     if (injectedUtmTerm) {
+          trafficParams.set('utm_term', injectedUtmTerm);
+     }
+     
+     console.log('[Variante] UTMs finais:', trafficParams.toString());
+     
+     // ✅ 5. APLICAR EM TODOS OS LINKS
+     if (trafficParams.toString()) {
+          var navLinks = document.querySelectorAll('a');
+          navLinks.forEach(function(item) {
+               if (item.href.indexOf('https://') !== -1) {
+                    if (item.href.indexOf('?') === -1) {
+                         item.href += '?' + trafficParams.toString();
+                    } else {
+                         item.href += '&' + trafficParams.toString();
+                    }
+               }
+          });
+          
+          console.log('[Variante] Links atualizados:', navLinks.length);
+     }
+})();
+</script>`;
+
+  // Copiar URL da campanha
+  const copyUrl = () => {
+    if (fullUrl) {
+      navigator.clipboard.writeText(fullUrl);
+      alert('URL copiado para área de transferência!');
+    }
+  };
+
+  // Copiar URL de conversão
   const copyConversionUrl = () => {
     if (conversionUrl) {
       navigator.clipboard.writeText(conversionUrl);
@@ -40,16 +90,25 @@ export default function EditCampaignPage() {
     }
   };
 
+  // Copiar script de tracking
+  const copyTrackingScript = () => {
+    navigator.clipboard.writeText(trackingScript);
+    alert('Script copiado! Cole no HTML das suas variações.');
+  };
+
   useEffect(() => {
     fetchCampaign();
     fetchDomains();
   }, []);
 
+  // ✅ AJUSTE 3: Buscar APENAS domínios ativos
   const fetchDomains = async () => {
     try {
       const res = await fetch('/api/domains');
       const data = await res.json();
-      setDomains(data.domains || []);
+      // ✅ Filtrar apenas domínios com status 'active'
+      const activeDomains = (data.domains || []).filter((d: any) => d.status === 'active');
+      setDomains(activeDomains);
     } catch (error) {
       console.error('Erro ao carregar domínios:', error);
     }
@@ -188,9 +247,6 @@ export default function EditCampaignPage() {
             className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
             placeholder="black-friday"
           />
-          <p className="mt-1 text-sm text-gray-500">
-            URL será: /r/{formData.slug || 'seu-slug'}
-          </p>
         </div>
 
         {/* Seletor de Domínio */}
@@ -201,7 +257,7 @@ export default function EditCampaignPage() {
           {domains.length === 0 ? (
             <div className="rounded-md bg-yellow-50 p-4">
               <p className="text-sm text-yellow-800">
-                Você precisa configurar um domínio customizado para criar campanhas.{' '}
+                Você precisa configurar um domínio customizado ativo para criar campanhas.{' '}
                 <a href="/domains" className="font-medium text-yellow-900 underline hover:text-yellow-700">
                   Adicionar domínio agora
                 </a>
@@ -217,12 +273,40 @@ export default function EditCampaignPage() {
               <option value="">Selecione um domínio</option>
               {domains.map(domain => (
                 <option key={domain.id} value={domain.id}>
-                  {domain.domain}
+                  {domain.domain} ✅
                 </option>
               ))}
             </select>
           )}
         </div>
+
+        {/* ✅ AJUSTE 2: URL Completo com botão Copiar (AGORA VISÍVEL NO EDIT) */}
+        {fullUrl && (
+          <div className="rounded-lg bg-blue-50 p-4 border-2 border-blue-200">
+            <label className="block text-sm font-medium text-blue-900 mb-2">
+              🔗 URL da Campanha (copie e cole nos seus anúncios):
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={fullUrl}
+                className="flex-1 rounded-md border-2 border-blue-300 bg-white px-3 py-2 text-gray-900 font-mono text-sm"
+              />
+              <Button
+                type="button"
+                onClick={copyUrl}
+                variant="outline"
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                📋 Copiar
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-blue-700">
+              Use esta URL nos seus anúncios do Meta Ads, Google Ads, TikTok Ads, etc.
+            </p>
+          </div>
+        )}
 
         {/* Variações */}
         <div className="space-y-4">
@@ -292,7 +376,7 @@ export default function EditCampaignPage() {
           ))}
         </div>
 
-        {/* Conversão Secundária - MOVIDA PARA O FINAL */}
+        {/* Conversão Secundária */}
         <div className="border-t pt-6">
           <div className="flex items-start gap-3 mb-4">
             <input
@@ -363,6 +447,36 @@ export default function EditCampaignPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ✅ AJUSTE 1: Script de Tracking para Variantes */}
+        <div className="border-t pt-6">
+          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-green-900 mb-3">
+              📝 Script de Tracking para as Variações
+            </h4>
+            <p className="text-sm text-green-800 mb-3">
+              Insira o código abaixo em <strong>todas as páginas</strong> que você cadastrou como variação nesta campanha, antes da tag <code>&lt;/body&gt;</code>:
+            </p>
+            <div className="relative">
+              <textarea
+                readOnly
+                value={trackingScript}
+                className="w-full h-48 font-mono text-xs bg-white border-2 border-green-300 rounded px-3 py-2 text-gray-900"
+              />
+              <Button
+                type="button"
+                onClick={copyTrackingScript}
+                className="absolute top-2 right-2 bg-green-600 hover:bg-green-700"
+                size="sm"
+              >
+                📋 Copiar Script
+              </Button>
+            </div>
+            <p className="text-xs text-green-700 mt-2">
+              Este script garante que o utm_term (ID de rastreamento) seja aplicado em todos os links da página, permitindo rastreamento completo de conversões.
+            </p>
+          </div>
         </div>
 
         <div className="flex gap-3">

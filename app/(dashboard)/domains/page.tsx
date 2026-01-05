@@ -226,7 +226,7 @@ export default function DomainsPage() {
                     <div className="font-medium text-gray-900">Valor:</div>
                     <div>
                       <code className="bg-white px-2 py-1 rounded text-gray-900">
-                        split2.com.br
+                        app.split2.com.br
                       </code>
                     </div>
                   </div>
