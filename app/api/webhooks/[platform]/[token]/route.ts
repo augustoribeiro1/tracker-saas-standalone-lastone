@@ -2,6 +2,65 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { parseTrackingCode } from '@/types';
 
+// ✅ FUNÇÃO UNIVERSAL: Busca recursiva em qualquer estrutura JSON
+function findValueInObject(obj: any, searchTerms: string[]): any {
+  if (!obj || typeof obj !== 'object') return null;
+
+  // Buscar no nível atual
+  for (const searchTerm of searchTerms) {
+    for (const key in obj) {
+      if (key.toLowerCase().includes(searchTerm.toLowerCase())) {
+        const value = obj[key];
+        // Retornar apenas se não for null/undefined/empty
+        if (value !== null && value !== undefined && value !== '') {
+          return value;
+        }
+      }
+    }
+  }
+
+  // Buscar recursivamente em objetos aninhados
+  for (const key in obj) {
+    const value = obj[key];
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const found = findValueInObject(value, searchTerms);
+      if (found !== null && found !== undefined && found !== '') {
+        return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+// ✅ FUNÇÃO UNIVERSAL: Extrai valor monetário com detecção de centavos
+function extractMonetaryValue(obj: any): number {
+  // Ordem de prioridade para busca
+  const priceTerms = [
+    ['charge_amount', 'charge'],           // Kiwify
+    ['price', 'product_price'],            // Hotmart, outros
+    ['amount', 'total_amount', 'value'],   // Genéricos
+    ['total', 'order_value']               // Alternativos
+  ];
+
+  for (const terms of priceTerms) {
+    const value = findValueInObject(obj, terms);
+    if (value !== null) {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        // ✅ Detectar se está em centavos (valores > 1000 provavelmente são)
+        // Exemplo: 6567 centavos = R$ 65,67
+        if (numValue >= 1000) {
+          return numValue / 100;
+        }
+        return numValue;
+      }
+    }
+  }
+
+  return 0;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { platform: string; token: string } }
@@ -37,31 +96,48 @@ export async function POST(
       }
     });
 
-    // 3. Extrair tracking code do utm_term ou custom field
-    const utmTerm = body.utm_term || body.utmTerm || body.tracking_code || '';
+    // ✅ 3. EXTRAÇÃO UNIVERSAL DE UTMs (funciona com qualquer estrutura)
+    const utmTerm = findValueInObject(body, ['utm_term', 'utmterm', 'tracking_code']);
     const trackingData = utmTerm ? parseTrackingCode(utmTerm) : null;
 
-    // Extrair outras UTMs
-    const utmSource = body.utm_source || body.utmSource || null;
-    const utmCampaign = body.utm_campaign || body.utmCampaign || null;
-    const utmMedium = body.utm_medium || body.utmMedium || null;
-    const utmContent = body.utm_content || body.utmContent || null;
+    const utmSource = findValueInObject(body, ['utm_source', 'utmsource']);
+    const utmCampaign = findValueInObject(body, ['utm_campaign', 'utmcampaign']);
+    const utmMedium = findValueInObject(body, ['utm_medium', 'utmmedium']);
+    const utmContent = findValueInObject(body, ['utm_content', 'utmcontent']);
+
+    // ✅ 4. EXTRAÇÃO UNIVERSAL DE VALOR (detecta centavos automaticamente)
+    const eventValue = extractMonetaryValue(body);
+    
+    // ✅ 5. EXTRAÇÃO UNIVERSAL DE NOME DO PRODUTO
+    const productName = findValueInObject(body, [
+      'product_name', 
+      'productname', 
+      'product', 
+      'item_name',
+      'name'
+    ]) || 'Purchase';
 
     if (!trackingData) {
       console.warn('[Webhook] No tracking code found, registering as untracked conversion');
     }
 
-    // ✅ 4. REGISTRAR CONVERSÃO VINCULADA AO USUÁRIO
+    console.log('[Webhook] Extracted data:', {
+      utmTerm: utmTerm || 'none',
+      value: eventValue,
+      productName
+    });
+
+    // ✅ 6. REGISTRAR CONVERSÃO VINCULADA AO USUÁRIO
     try {
       await db.event.create({
         data: {
-          userId: user.id,                            // ✅ SEMPRE vincula ao dono do webhook
+          userId: user.id,
           clickId: trackingData?.clickId || null,
           campaignId: trackingData?.testId || null,
           variationId: trackingData?.variationId || null,
           eventType: 'purchase',
-          eventName: body.product_name || body.productName || 'Purchase',
-          eventValue: parseFloat(body.price || body.amount || 0),
+          eventName: productName,
+          eventValue: eventValue,
           utmTerm: utmTerm || null,
           utmSource: utmSource,
           utmCampaign: utmCampaign,
@@ -73,14 +149,15 @@ export async function POST(
       console.log('[Webhook] Conversion registered:', {
         userId: user.id,
         clickId: trackingData?.clickId || 'untracked',
-        value: body.price || body.amount
+        value: eventValue,
+        product: productName
       });
     } catch (dbError) {
       console.error('[Webhook] Database error:', dbError);
       // Continuar e retornar 200 mesmo com erro
     }
 
-    // 5. Atualizar webhook stats (se config existe)
+    // 7. Atualizar webhook stats (se config existe)
     if (webhookConfig) {
       try {
         await db.webhookConfiguration.update({
@@ -94,7 +171,7 @@ export async function POST(
         console.error('[Webhook] Failed to update stats:', updateError);
       }
 
-      // 6. Log do webhook
+      // 8. Log do webhook
       try {
         await db.webhookLog.create({
           data: {
