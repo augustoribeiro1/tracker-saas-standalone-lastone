@@ -11,15 +11,50 @@ export default function WebhooksPage() {
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [newWebhook, setNewWebhook] = useState<any>(null);
 
+  // ✅ NOVO: Estado para conversões
+  const [conversions, setConversions] = useState<any[]>([]);
+  const [conversionsLoading, setConversionsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<any>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+
   useEffect(() => {
     fetchWebhooks();
+    fetchConversions(1);
   }, []);
+
+  // ✅ NOVO: Auto-refresh a cada 30 segundos
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      fetchConversions(currentPage);
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, currentPage]);
 
   const fetchWebhooks = async () => {
     const res = await fetch('/api/webhooks/manage');
     const data = await res.json();
     setWebhooks(data.webhooks || []);
     setLoading(false);
+  };
+
+  // ✅ NOVO: Buscar conversões
+  const fetchConversions = async (page: number) => {
+    setConversionsLoading(true);
+    try {
+      const res = await fetch(`/api/webhooks/conversions?page=${page}&per_page=50`);
+      const data = await res.json();
+      setConversions(data.conversions || []);
+      setPagination(data.pagination);
+      setCurrentPage(page);
+    } catch (error) {
+      console.error('Error fetching conversions:', error);
+    } finally {
+      setConversionsLoading(false);
+    }
   };
 
   const createWebhook = async (platform: string) => {
@@ -54,6 +89,27 @@ export default function WebhooksPage() {
       case 'pending': return 'Pendente';
       default: return status;
     }
+  };
+
+  // ✅ NOVO: Formatar data
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  // ✅ NOVO: Formatar valor
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
 
   return (
@@ -151,6 +207,143 @@ export default function WebhooksPage() {
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* ✅ NOVA SEÇÃO: Conversões Recentes */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-medium text-gray-900">Compras Registradas</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Últimas conversões recebidas via webhook
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Auto-refresh (30s)
+            </label>
+            <Button
+              size="sm"
+              onClick={() => fetchConversions(currentPage)}
+              disabled={conversionsLoading}
+            >
+              🔄 Atualizar
+            </Button>
+          </div>
+        </div>
+
+        {conversionsLoading ? (
+          <div className="p-6 text-center">Carregando conversões...</div>
+        ) : conversions.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">
+            <p className="mb-2">Nenhuma conversão registrada ainda</p>
+            <p className="text-xs">
+              As conversões aparecerão aqui quando os webhooks receberem notificações de compra
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campanha</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Click ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Source</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Campaign</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Medium</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Content</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data/Hora</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {conversions.map((conversion) => (
+                    <tr key={conversion.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">
+                        {conversion.campaign ? (
+                          <a
+                            href={`/campaigns/${conversion.campaign.id}`}
+                            className="text-blue-600 hover:text-blue-900 font-medium"
+                          >
+                            {conversion.campaign.name}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {conversion.clickId ? (
+                          <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-mono">
+                            {conversion.clickId.substring(0, 12)}...
+                          </code>
+                        ) : (
+                          <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded">
+                            Não rastreado
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {conversion.utmSource || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {conversion.utmCampaign || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {conversion.utmMedium || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {conversion.utmContent || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
+                        {formatCurrency(conversion.eventValue)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {formatDate(conversion.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginação */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Página {pagination.page} de {pagination.totalPages} 
+                  <span className="ml-2 text-gray-500">
+                    ({pagination.total} conversões no total)
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fetchConversions(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    ← Anterior
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fetchConversions(currentPage + 1)}
+                    disabled={currentPage === pagination.totalPages}
+                  >
+                    Próxima →
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
