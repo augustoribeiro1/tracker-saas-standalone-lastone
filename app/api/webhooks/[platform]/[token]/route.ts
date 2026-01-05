@@ -47,20 +47,20 @@ export async function POST(
     try {
       // Se não tiver trackingData, usar valores padrão
       await db.event.create({
-        data: {
-          clickId: trackingData?.clickId || 'untracked',
-          campaignId: trackingData?.testId || 0,
-          variationId: trackingData?.variationId || 0,
-          eventType: 'purchase',
-          eventName: body.product_name || body.productName || 'Purchase',
-          eventValue: parseFloat(body.price || body.amount || 0),
-          utmTerm: utmTerm || '',
-          utmSource: utmSource || '',
-          utmCampaign: utmCampaign || '',
-          utmMedium: utmMedium || '',
-          utmContent: utmContent || '',
-        }
-      });
+		data: {
+			clickId: trackingData?.clickId || null,      // ✅ null ao invés de 'untracked'
+			campaignId: trackingData?.testId || null,    // ✅ null ao invés de 0
+			variationId: trackingData?.variationId || null, // ✅ null ao invés de 0
+			eventType: 'purchase',
+			eventName: body.product_name || body.productName || 'Purchase',
+			eventValue: parseFloat(body.price || body.amount || 0),
+			utmTerm: utmTerm || null,
+			utmSource: utmSource || null,
+			utmCampaign: utmCampaign || null,
+			utmMedium: utmMedium || null,
+			utmContent: utmContent || null,
+			}
+	});
 
       console.log('[Webhook] Conversion registered:', {
         clickId: trackingData?.clickId || 'untracked',
