@@ -280,7 +280,7 @@ export default function WebhooksPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {conversion.clickId && conversion.clickId !== 'untracked' ? (
+                        {conversion.clickId ? (
                           <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-mono">
                             {conversion.clickId.substring(0, 12)}...
                           </code>
