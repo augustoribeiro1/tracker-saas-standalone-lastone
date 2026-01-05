@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ GERAR CLICKID ÚNICO
-    const clickid = nanoid(16);
+    const clickid = nanoid(20);
 
     console.log('[/api/track/click] Selected variation:', variation.id, 'Traffic:', (variation.trafficPercentage || 'undefined') + '%', 'Clickid:', clickid);
 
