@@ -17,27 +17,16 @@ export async function GET(request: NextRequest) {
     const perPage = parseInt(searchParams.get('per_page') || '50');
     const skip = (page - 1) * perPage;
 
-    // Buscar IDs das campanhas do usuário
-    const userCampaignIds = await db.campaign.findMany({
-      where: { userId },
-      select: { id: true }
-    });
-    const campaignIds = userCampaignIds.map(c => c.id);
-
-    // Buscar conversões (purchases) do usuário
-    // Inclui: conversões rastreadas (com campaignId) e não rastreadas (campaignId null)
+    // ✅ BUSCAR CONVERSÕES DO USUÁRIO
+    // Inclui:
+    // 1. Conversões rastreadas (com campaignId de campanhas do usuário)
+    // 2. Conversões não rastreadas (userId direto no Event)
     const conversions = await db.event.findMany({
       where: {
         eventType: 'purchase',
         OR: [
-          { campaignId: { in: campaignIds } },  // Conversões rastreadas deste usuário
-          { 
-            AND: [
-              { campaignId: null },               // Conversões não rastreadas
-              // Para não rastreadas, mostrar apenas as do webhook deste usuário
-              // (por enquanto mostra todas - TODO: adicionar userId ao Event)
-            ]
-          }
+          { campaign: { userId } },  // Conversões rastreadas (vinculadas a campanhas)
+          { userId }                 // Conversões não rastreadas (vinculadas diretamente)
         ]
       },
       orderBy: {
@@ -66,13 +55,13 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Contar total de conversões
+    // ✅ CONTAR TOTAL DE CONVERSÕES DO USUÁRIO
     const totalCount = await db.event.count({
       where: {
         eventType: 'purchase',
         OR: [
-          { campaignId: { in: campaignIds } },
-          { campaignId: null }
+          { campaign: { userId } },
+          { userId }
         ]
       }
     });

@@ -22,6 +22,8 @@ model User {
   maxDomains       Int     @default(0)
   status           String  @default("active")
   
+  webhookToken     String? @unique  // ✅ NOVO: Token único para webhooks
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -31,6 +33,7 @@ model User {
   subscriptions   Subscription[]
   accounts        Account[]
   sessions        Session[]
+  events          Event[]  // ✅ NOVO: Relação com Event
 }
 
 model Account {
@@ -108,9 +111,10 @@ model Variation {
 
 model Event {
   id           Int      @id @default(autoincrement())
-  clickId      String?   // OOPCIONAL
-  campaignId   Int?      // OOPCIONAL
-  variationId  Int?      // OOPCIONAL
+  userId       Int?     // ✅ NOVO: Para conversões não rastreadas (vincula ao dono do webhook)
+  clickId      String?
+  campaignId   Int?
+  variationId  Int?
   eventType    String
   eventName    String?
   eventValue   Float?
@@ -124,9 +128,11 @@ model Event {
   utmContent   String?
   createdAt    DateTime @default(now())
   
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaign  Campaign?  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   variation Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
   
+  @@index([userId])
   @@index([clickId])
   @@index([campaignId])
   @@index([variationId])
