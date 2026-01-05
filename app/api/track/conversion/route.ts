@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
     }
 
     const customDomain = domain || request.headers.get('host');
-
     console.log('[/api/track/conversion] Slug:', slug, 'Clickid:', clickid);
 
     // Buscar campanha com variations
@@ -75,8 +74,13 @@ export async function POST(request: NextRequest) {
 
     const variation = campaign.variations.find(v => v.id === variationId) || campaign.variations[0];
 
-    // ✅ URL de checkout
-    let checkoutUrl = (variation as any).checkoutUrl || variation.destinationUrl;
+    // ✅ URL de checkout - ORDEM CORRETA:
+    // 1. campaign.checkoutUrl (Conversão Secundária configurada na campanha)
+    // 2. variation.checkoutUrl (Se tiver configurado na variation)
+    // 3. variation.destinationUrl (Fallback)
+    let checkoutUrl = (campaign as any).checkoutUrl || 
+                      (variation as any).checkoutUrl || 
+                      variation.destinationUrl;
 
     if (!checkoutUrl) {
       console.log('[/api/track/conversion] No checkout URL:', variation.id);
