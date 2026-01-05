@@ -108,9 +108,9 @@ model Variation {
 
 model Event {
   id           Int      @id @default(autoincrement())
-  clickId      String?  // ✅ AGORA OPCIONAL
-  campaignId   Int?     // ✅ AGORA OPCIONAL
-  variationId  Int?     // ✅ AGORA OPCIONAL
+  clickId      String   // Obrigatório - usa 'untracked' como padrão
+  campaignId   Int      // Obrigatório - usa 0 como padrão
+  variationId  Int      // Obrigatório - usa 0 como padrão
   eventType    String
   eventName    String?
   eventValue   Float?

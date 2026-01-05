@@ -43,22 +43,22 @@ export async function POST(
       console.warn('[Webhook] No tracking code found, registering as untracked conversion');
     }
 
-    // 3. ✅ REGISTRAR CONVERSÃO MESMO SEM CLICKID
+    // 3. ✅ REGISTRAR CONVERSÃO USANDO VALORES PADRÃO (não null)
     try {
-      // Se tiver trackingData, usar. Se não, deixar null
+      // Se não tiver trackingData, usar valores padrão
       await db.event.create({
         data: {
-          clickId: trackingData?.clickId || null,
-          campaignId: trackingData?.testId || null,
-          variationId: trackingData?.variationId || null,
+          clickId: trackingData?.clickId || 'untracked',
+          campaignId: trackingData?.testId || 0,
+          variationId: trackingData?.variationId || 0,
           eventType: 'purchase',
           eventName: body.product_name || body.productName || 'Purchase',
           eventValue: parseFloat(body.price || body.amount || 0),
-          utmTerm: utmTerm || null,
-          utmSource: utmSource,
-          utmCampaign: utmCampaign,
-          utmMedium: utmMedium,
-          utmContent: utmContent,
+          utmTerm: utmTerm || '',
+          utmSource: utmSource || '',
+          utmCampaign: utmCampaign || '',
+          utmMedium: utmMedium || '',
+          utmContent: utmContent || '',
         }
       });
 

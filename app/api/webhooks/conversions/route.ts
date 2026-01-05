@@ -18,10 +18,14 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * perPage;
 
     // Buscar conversões (purchases) do usuário com UTMs
+    // ✅ Inclui tanto rastreadas quanto não rastreadas
     const conversions = await db.event.findMany({
       where: {
-        campaign: { userId },
-        eventType: 'purchase'
+        eventType: 'purchase',
+        OR: [
+          { campaign: { userId } },
+          { campaignId: 0 } // Conversões não rastreadas
+        ]
       },
       orderBy: {
         createdAt: 'desc'
