@@ -66,52 +66,40 @@ export async function GET(
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
   }
 
-  // Buscar métricas por variação
+  // ✅ BUSCAR MÉTRICAS USANDO TABELAS CLICK E CONVERSION
   const metricsRaw = await db.$queryRaw`
     SELECT 
       v.id as variation_id,
       v.name as variation_name,
       
-      COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END) as views,
-      COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' AND e."eventName" = 'checkout_click' THEN e."clickId" END) as checkouts,
-      COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) as purchases,
+      COUNT(DISTINCT c.id) as views,
+      COUNT(DISTINCT co.id) as checkouts,
+      0 as purchases,
       
-      COALESCE(SUM(CASE WHEN e."eventType" = 'purchase' THEN e."eventValue" ELSE 0 END), 0) as revenue,
+      0 as revenue,
       
       COALESCE(
         ROUND(
-          (COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' AND e."eventName" = 'checkout_click' THEN e."clickId" END) * 100.0 / 
-          NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0))::numeric, 
+          (COUNT(DISTINCT co.id) * 100.0 / 
+          NULLIF(COUNT(DISTINCT c.id), 0))::numeric, 
           2
         ),
         0
       ) as checkout_rate,
       
-      COALESCE(
-        ROUND(
-          (COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) * 100.0 / 
-          NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END), 0))::numeric, 
-          2
-        ),
-        0
-      ) as purchase_rate,
-      
-      COALESCE(
-        ROUND(
-          (COALESCE(SUM(CASE WHEN e."eventType" = 'purchase' THEN e."eventValue" ELSE 0 END), 0) / 
-          NULLIF(COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END), 0))::numeric,
-          2
-        ),
-        0
-      ) as avg_order_value
+      0 as purchase_rate,
+      0 as avg_order_value
       
     FROM "Variation" v
-    LEFT JOIN "Event" e ON v.id = e."variationId" 
-      AND DATE(e."createdAt") >= DATE(${startDate}::timestamp)
-      AND DATE(e."createdAt") <= DATE(${endDate}::timestamp)
+    LEFT JOIN "Click" c ON v.id = c."variationId" 
+      AND DATE(c."createdAt") >= DATE(${startDate}::timestamp)
+      AND DATE(c."createdAt") <= DATE(${endDate}::timestamp)
+    LEFT JOIN "Conversion" co ON v.id = co."variationId"
+      AND DATE(co."createdAt") >= DATE(${startDate}::timestamp)
+      AND DATE(co."createdAt") <= DATE(${endDate}::timestamp)
     WHERE v."campaignId" = ${campaignId}
     GROUP BY v.id, v.name
-    ORDER BY revenue DESC
+    ORDER BY views DESC
   `;
   
   // Converter BigInt para Number
@@ -120,22 +108,26 @@ export async function GET(
   console.log('[Analytics] Metrics fetched:', metrics.length, 'variations');
   console.log('[Analytics] Sample metric:', metrics[0]);
 
-  // Buscar dados do funil
+  // ✅ BUSCAR DADOS DO FUNIL (SIMPLIFICADO - SÓ VIEWS E CONVERSÕES)
   const funnelDataRaw = await db.$queryRaw`
     WITH funnel_steps AS (
       SELECT 
         "variationId",
-        COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END) as step_views,
-        COUNT(DISTINCT CASE WHEN "eventType" = 'engagement' AND "eventName" = 'video_play' THEN "clickId" END) as step_video_play,
-        COUNT(DISTINCT CASE WHEN "eventType" = 'engagement' AND "eventName" = 'video_50' THEN "clickId" END) as step_video_50,
-        COUNT(DISTINCT CASE WHEN "eventType" = 'engagement' AND "eventName" = 'video_complete' THEN "clickId" END) as step_video_complete,
-        COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' AND "eventName" = 'checkout_click' THEN "clickId" END) as step_checkout,
-        COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as step_purchase
-      FROM "Event"
-      WHERE "campaignId" = ${campaignId}
-        AND DATE("createdAt") >= DATE(${startDate}::timestamp)
-        AND DATE("createdAt") <= DATE(${endDate}::timestamp)
-      GROUP BY "variationId"
+        COUNT(DISTINCT c.id) as step_views,
+        0 as step_video_play,
+        0 as step_video_50,
+        0 as step_video_complete,
+        COUNT(DISTINCT co.id) as step_checkout,
+        0 as step_purchase
+      FROM "Variation" v
+      LEFT JOIN "Click" c ON v.id = c."variationId"
+        AND DATE(c."createdAt") >= DATE(${startDate}::timestamp)
+        AND DATE(c."createdAt") <= DATE(${endDate}::timestamp)
+      LEFT JOIN "Conversion" co ON v.id = co."variationId"
+        AND DATE(co."createdAt") >= DATE(${startDate}::timestamp)
+        AND DATE(co."createdAt") <= DATE(${endDate}::timestamp)
+      WHERE v."campaignId" = ${campaignId}
+      GROUP BY v.id
     )
     SELECT * FROM funnel_steps
   `;
@@ -143,19 +135,32 @@ export async function GET(
   // Converter BigInt para Number
   const funnelData = convertBigIntToNumber(funnelDataRaw);
 
-  // Buscar timeline (período selecionado)
+  // ✅ BUSCAR TIMELINE USANDO CLICK E CONVERSION
   const timelineRaw = await db.$queryRaw`
     SELECT 
-      DATE("createdAt") as date,
-      COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END) as views,
-      COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) as conversions,
-      COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as purchases,
-      COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) as revenue
-    FROM "Event"
-    WHERE "campaignId" = ${campaignId}
-      AND DATE("createdAt") >= DATE(${startDate}::timestamp)
-      AND DATE("createdAt") <= DATE(${endDate}::timestamp)
-    GROUP BY DATE("createdAt")
+      date::date,
+      COALESCE(SUM(views), 0) as views,
+      COALESCE(SUM(conversions), 0) as conversions,
+      0 as purchases,
+      0 as revenue
+    FROM (
+      SELECT DATE("createdAt") as date, COUNT(*) as views, 0 as conversions
+      FROM "Click"
+      WHERE "campaignId" = ${campaignId}
+        AND DATE("createdAt") >= DATE(${startDate}::timestamp)
+        AND DATE("createdAt") <= DATE(${endDate}::timestamp)
+      GROUP BY DATE("createdAt")
+      
+      UNION ALL
+      
+      SELECT DATE("createdAt") as date, 0 as views, COUNT(*) as conversions
+      FROM "Conversion"
+      WHERE "campaignId" = ${campaignId}
+        AND DATE("createdAt") >= DATE(${startDate}::timestamp)
+        AND DATE("createdAt") <= DATE(${endDate}::timestamp)
+      GROUP BY DATE("createdAt")
+    ) combined
+    GROUP BY date
     ORDER BY date ASC
   `;
   
