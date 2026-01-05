@@ -193,14 +193,14 @@ export default function CampaignAnalyticsPage() {
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Timeline */}
+        {/* Timeline - ✅ ESCALA DINÂMICA */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Performance ao Longo do Tempo</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data.timeline}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis />
+              <YAxis domain={[0, 'auto']} allowDataOverflow={false} />
               <Tooltip />
               <Legend />
               <Line type="monotone" dataKey="views" stroke="#3B82F6" name="Views" strokeWidth={2} />

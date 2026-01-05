@@ -66,7 +66,7 @@ export async function GET(
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
   }
 
-  // ✅ BUSCAR MÉTRICAS USANDO TABELAS CLICK E CONVERSION
+  // ✅ BUSCAR MÉTRICAS USANDO TABELAS CLICK E CONVERSION (COM GMT-3)
   const metricsRaw = await db.$queryRaw`
     SELECT 
       v.id as variation_id,
@@ -92,11 +92,11 @@ export async function GET(
       
     FROM "Variation" v
     LEFT JOIN "Click" c ON v.id = c."variationId" 
-      AND DATE(c."createdAt") >= DATE(${startDate}::timestamp)
-      AND DATE(c."createdAt") <= DATE(${endDate}::timestamp)
+      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
+      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
     LEFT JOIN "Conversion" co ON v.id = co."variationId"
-      AND DATE(co."createdAt") >= DATE(${startDate}::timestamp)
-      AND DATE(co."createdAt") <= DATE(${endDate}::timestamp)
+      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
+      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
     WHERE v."campaignId" = ${campaignId}
     GROUP BY v.id, v.name
     ORDER BY views DESC
@@ -108,7 +108,7 @@ export async function GET(
   console.log('[Analytics] Metrics fetched:', metrics.length, 'variations');
   console.log('[Analytics] Sample metric:', metrics[0]);
 
-  // ✅ BUSCAR DADOS DO FUNIL (CORRIGIDO - SEM AMBIGUIDADE)
+  // ✅ BUSCAR DADOS DO FUNIL (COM GMT-3)
   const funnelDataRaw = await db.$queryRaw`
     SELECT 
       v.id as "variationId",
@@ -120,11 +120,11 @@ export async function GET(
       0 as step_purchase
     FROM "Variation" v
     LEFT JOIN "Click" c ON v.id = c."variationId"
-      AND DATE(c."createdAt") >= DATE(${startDate}::timestamp)
-      AND DATE(c."createdAt") <= DATE(${endDate}::timestamp)
+      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
+      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
     LEFT JOIN "Conversion" co ON v.id = co."variationId"
-      AND DATE(co."createdAt") >= DATE(${startDate}::timestamp)
-      AND DATE(co."createdAt") <= DATE(${endDate}::timestamp)
+      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
+      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
     WHERE v."campaignId" = ${campaignId}
     GROUP BY v.id
   `;
@@ -132,7 +132,7 @@ export async function GET(
   // Converter BigInt para Number
   const funnelData = convertBigIntToNumber(funnelDataRaw);
 
-  // ✅ BUSCAR TIMELINE USANDO CLICK E CONVERSION
+  // ✅ BUSCAR TIMELINE USANDO CLICK E CONVERSION (COM GMT-3)
   const timelineRaw = await db.$queryRaw`
     SELECT 
       date::date,
@@ -141,21 +141,21 @@ export async function GET(
       0 as purchases,
       0 as revenue
     FROM (
-      SELECT DATE("createdAt") as date, COUNT(*) as views, 0 as conversions
+      SELECT DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') as date, COUNT(*) as views, 0 as conversions
       FROM "Click"
       WHERE "campaignId" = ${campaignId}
-        AND DATE("createdAt") >= DATE(${startDate}::timestamp)
-        AND DATE("createdAt") <= DATE(${endDate}::timestamp)
-      GROUP BY DATE("createdAt")
+        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
+        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
+      GROUP BY DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo')
       
       UNION ALL
       
-      SELECT DATE("createdAt") as date, 0 as views, COUNT(*) as conversions
+      SELECT DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') as date, 0 as views, COUNT(*) as conversions
       FROM "Conversion"
       WHERE "campaignId" = ${campaignId}
-        AND DATE("createdAt") >= DATE(${startDate}::timestamp)
-        AND DATE("createdAt") <= DATE(${endDate}::timestamp)
-      GROUP BY DATE("createdAt")
+        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
+        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
+      GROUP BY DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo')
     ) combined
     GROUP BY date
     ORDER BY date ASC

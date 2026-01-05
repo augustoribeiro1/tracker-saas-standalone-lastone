@@ -32,19 +32,19 @@ export async function GET() {
       db.customDomain.count({ where: { userId } }),
     ]);
 
-    // Estatísticas dos últimos 7 dias
+    // ✅ Estatísticas dos últimos 7 dias - USANDO CLICK E CONVERSION COM GMT-3
     const stats = await db.$queryRaw<any[]>`
       SELECT 
-        COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END) as total_views,
-        COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) as total_conversions,
-        COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) as total_purchases,
-        COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) as total_revenue,
+        COUNT(DISTINCT cl.id) as total_views,
+        COUNT(DISTINCT co.id) as total_conversions,
+        0 as total_purchases,
+        0 as total_revenue,
         
         COALESCE(
           ROUND(
             CAST(
-              COUNT(DISTINCT CASE WHEN "eventType" = 'conversion' THEN "clickId" END) * 100.0 / 
-              NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0)
+              COUNT(DISTINCT co.id) * 100.0 / 
+              NULLIF(COUNT(DISTINCT cl.id), 0)
               AS numeric
             ),
             2
@@ -52,34 +52,15 @@ export async function GET() {
           0
         ) as conversion_rate,
         
-        COALESCE(
-          ROUND(
-            CAST(
-              COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END) * 100.0 / 
-              NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'view' THEN "clickId" END), 0)
-              AS numeric
-            ),
-            2
-          ),
-          0
-        ) as purchase_rate,
+        0 as purchase_rate,
+        0 as avg_order_value
         
-        COALESCE(
-          ROUND(
-            CAST(
-              COALESCE(SUM(CASE WHEN "eventType" = 'purchase' THEN "eventValue" ELSE 0 END), 0) / 
-              NULLIF(COUNT(DISTINCT CASE WHEN "eventType" = 'purchase' THEN "clickId" END), 0)
-              AS numeric
-            ),
-            2
-          ),
-          0
-        ) as avg_order_value
-        
-      FROM "Event" e
-      INNER JOIN "Campaign" c ON e."campaignId" = c.id
+      FROM "Campaign" c
+      LEFT JOIN "Click" cl ON c.id = cl."campaignId"
+        AND cl."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
+      LEFT JOIN "Conversion" co ON c.id = co."campaignId"
+        AND co."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
       WHERE c."userId" = ${userId}
-        AND e."createdAt" >= ${sevenDaysAgo}
     `;
 
     const currentStats = stats[0] || {
@@ -92,62 +73,80 @@ export async function GET() {
       avg_order_value: 0,
     };
 
-  // Timeline dos últimos 7 dias
-  const timeline = await db.$queryRaw<any[]>`
-    SELECT 
-      DATE(e."createdAt") as date,
-      COUNT(DISTINCT CASE WHEN e."eventType" = 'view' THEN e."clickId" END) as views,
-      COUNT(DISTINCT CASE WHEN e."eventType" = 'conversion' THEN e."clickId" END) as conversions,
-      COUNT(DISTINCT CASE WHEN e."eventType" = 'purchase' THEN e."clickId" END) as purchases
-    FROM "Event" e
-    INNER JOIN "Campaign" c ON e."campaignId" = c.id
-    WHERE c."userId" = ${userId}
-      AND e."createdAt" >= ${sevenDaysAgo}
-    GROUP BY DATE(e."createdAt")
-    ORDER BY date ASC
-  `;
+    // ✅ Timeline dos últimos 7 dias - USANDO CLICK E CONVERSION COM GMT-3
+    const timeline = await db.$queryRaw<any[]>`
+      SELECT 
+        date::date,
+        COALESCE(SUM(views), 0) as views,
+        COALESCE(SUM(conversions), 0) as conversions,
+        0 as purchases
+      FROM (
+        SELECT 
+          DATE(cl."createdAt" AT TIME ZONE 'America/Sao_Paulo') as date,
+          COUNT(*) as views,
+          0 as conversions
+        FROM "Click" cl
+        INNER JOIN "Campaign" c ON cl."campaignId" = c.id
+        WHERE c."userId" = ${userId}
+          AND cl."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
+        GROUP BY DATE(cl."createdAt" AT TIME ZONE 'America/Sao_Paulo')
+        
+        UNION ALL
+        
+        SELECT 
+          DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') as date,
+          0 as views,
+          COUNT(*) as conversions
+        FROM "Conversion" co
+        INNER JOIN "Campaign" c ON co."campaignId" = c.id
+        WHERE c."userId" = ${userId}
+          AND co."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
+        GROUP BY DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo')
+      ) combined
+      GROUP BY date
+      ORDER BY date ASC
+    `;
 
-  // Contar clicks do mês atual
-  const currentMonth = new Date();
-  currentMonth.setDate(1);
-  currentMonth.setHours(0, 0, 0, 0);
+    // ✅ Contar clicks do mês atual - USANDO CLICK COM GMT-3
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
 
-  const clicksThisMonth = await db.event.count({
-    where: {
-      campaign: { userId },
-      eventType: 'view',
-      createdAt: { gte: currentMonth }
-    }
-  });
+    const clicksThisMonth = await db.click.count({
+      where: {
+        campaign: { userId },
+        createdAt: { gte: currentMonth }
+      }
+    });
 
-  return NextResponse.json({
-    planLimits: {
-      maxCampaigns: user?.maxCampaigns || 0,
-      maxClicks: user?.maxClicks || 0,
-      maxDomains: user?.maxDomains || 0,
-    },
-    usage: {
-      campaigns: campaignsCount,
-      clicks: clicksThisMonth,
-      domains: domainsCount,
-    },
-    totalViews: parseInt(currentStats.total_views || '0'),
-    totalConversions: parseInt(currentStats.total_conversions || '0'),
-    totalPurchases: parseInt(currentStats.total_purchases || '0'),
-    totalRevenue: parseFloat(currentStats.total_revenue || '0'),
-    conversionRate: parseFloat(currentStats.conversion_rate || '0'),
-    purchaseRate: parseFloat(currentStats.purchase_rate || '0'),
-    avgOrderValue: parseFloat(currentStats.avg_order_value || '0'),
-    avgConversionRate: parseFloat(currentStats.conversion_rate || '0'),
-    webhooksCount,
-    domainsCount,
-    timeline: timeline.map(t => ({
-      date: t.date.toISOString().split('T')[0],
-      views: parseInt(t.views || '0'),
-      conversions: parseInt(t.conversions || '0'),
-      purchases: parseInt(t.purchases || '0'),
-    })),
-  });
+    return NextResponse.json({
+      planLimits: {
+        maxCampaigns: user?.maxCampaigns || 0,
+        maxClicks: user?.maxClicks || 0,
+        maxDomains: user?.maxDomains || 0,
+      },
+      usage: {
+        campaigns: campaignsCount,
+        clicks: clicksThisMonth,
+        domains: domainsCount,
+      },
+      totalViews: parseInt(currentStats.total_views || '0'),
+      totalConversions: parseInt(currentStats.total_conversions || '0'),
+      totalPurchases: parseInt(currentStats.total_purchases || '0'),
+      totalRevenue: parseFloat(currentStats.total_revenue || '0'),
+      conversionRate: parseFloat(currentStats.conversion_rate || '0'),
+      purchaseRate: parseFloat(currentStats.purchase_rate || '0'),
+      avgOrderValue: parseFloat(currentStats.avg_order_value || '0'),
+      avgConversionRate: parseFloat(currentStats.conversion_rate || '0'),
+      webhooksCount,
+      domainsCount,
+      timeline: timeline.map(t => ({
+        date: t.date.toISOString().split('T')[0],
+        views: parseInt(t.views || '0'),
+        conversions: parseInt(t.conversions || '0'),
+        purchases: parseInt(t.purchases || '0'),
+      })),
+    });
   } catch (error) {
     console.error('Error in dashboard stats:', error);
     return NextResponse.json(
