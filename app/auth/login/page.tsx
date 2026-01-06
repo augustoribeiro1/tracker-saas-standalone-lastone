@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
@@ -43,15 +42,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="flex flex-col items-center">
-          {/* ✅ LOGO CENTRALIZADA */}
-          <Image
+          {/* ✅ LOGO COM <img> NATIVO (sem Next/Image) */}
+          <img
             src="/logo.png"
             alt="Split2"
-            width={180}
-            height={65}
-            priority
+            width="180"
+            height="65"
             className="mb-6"
-            style={{ objectFit: 'contain' }}
+            style={{ maxWidth: '180px', height: 'auto' }}
           />
           <p className="mt-2 text-center text-sm text-gray-600">
             Faça login na sua conta
