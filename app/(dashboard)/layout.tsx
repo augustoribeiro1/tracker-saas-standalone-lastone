@@ -3,6 +3,7 @@
 import { SessionProvider } from 'next-auth/react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 function DashboardNav() {
@@ -22,9 +23,19 @@ function DashboardNav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <h1 className="text-xl font-bold text-blue-600">Split2</h1>
-            </div>
+            {/* ✅ LOGO RESPONSIVA */}
+            <Link href="/" className="flex-shrink-0 flex items-center">
+              <Image
+                src="/logo.png"
+                alt="Split2"
+                width={140}
+                height={50}
+                priority
+                className="h-8 w-auto sm:h-10"
+                style={{ objectFit: 'contain' }}
+              />
+            </Link>
+            
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navigation.map((item) => (
                 <Link
@@ -48,7 +59,7 @@ function DashboardNav() {
               </span>
             </div>
             <div className="ml-4 flex items-center">
-              <span className="text-sm text-gray-700 mr-4">{session?.user?.email}</span>
+              <span className="text-sm text-gray-700 mr-4 hidden sm:inline">{session?.user?.email}</span>
               <button
                 onClick={() => signOut()}
                 className="text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md hover:bg-gray-100"
