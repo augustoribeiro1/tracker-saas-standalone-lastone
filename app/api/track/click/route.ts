@@ -4,8 +4,11 @@ import { nanoid } from 'nanoid';
 
 /**
  * API /api/track/click
- * Registra click + seleciona variation + gera clickid
- * Chamada pelo Worker ANTES de fazer proxy
+ * Registra click + seleciona variation + retorna dados para o Worker
+ * 
+ * IMPORTANTE: O clickid gerado aqui é apenas para analytics interno.
+ * O clickid usado no tracking de conversão (com prefixo split2_) é gerado
+ * pelo script /tracking.js no browser do usuário.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ GERAR CLICKID ÚNICO
+    // ✅ GERAR CLICKID ÚNICO (para analytics interno)
     const clickid = nanoid(20);
 
     console.log('[/api/track/click] Selected variation:', variation.id, 'Traffic:', (variation.trafficPercentage || 'undefined') + '%', 'Clickid:', clickid);
@@ -106,17 +109,17 @@ export async function POST(request: NextRequest) {
       // Não falhar se analytics der erro
     }
 
-    // ✅ RETORNAR DADOS
+    // ✅ RETORNAR DADOS PARA O WORKER
     return NextResponse.json({
       success: true,
+      campaignId: campaign.id,        // ← IMPORTANTE: Worker precisa disso!
+      clickid: clickid,                // ← Para analytics interno
       variation: {
         id: variation.id,
         name: variation.name,
         destinationUrl: variation.destinationUrl,
         trafficPercentage: variation.trafficPercentage
-      },
-      clickid: clickid,
-      campaignId: campaign.id
+      }
     });
 
   } catch (error) {
