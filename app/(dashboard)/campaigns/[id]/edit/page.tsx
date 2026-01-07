@@ -37,43 +37,6 @@ export default function EditCampaignPage() {
     ? `https://${selectedDomain.domain}/c/${formData.slug}`
     : '';
 
-  // ✅ AJUSTE 1: Script de tracking para copiar
-  const trackingScript = `<script>
-(function() {
-     // ✅ 1. CAPTURAR utm_term INJETADO PELO SPLIT2
-     const injectedUtmTerm = window.__INJECTED_UTM_TERM || null;
-     
-     // ✅ 2. CAPTURAR UTMs DO TRÁFEGO (utm_source, utm_campaign, etc)
-     const trafficParams = new URLSearchParams(window.location.search);
-     
-     // ✅ 3. REMOVER utm_term DO TRÁFEGO (se existir)
-     trafficParams.delete('utm_term');
-     
-     // ✅ 4. SEMPRE USAR utm_term DO SPLIT2 (sobrescreve tráfego)
-     if (injectedUtmTerm) {
-          trafficParams.set('utm_term', injectedUtmTerm);
-     }
-     
-     console.log('[Variante] UTMs finais:', trafficParams.toString());
-     
-     // ✅ 5. APLICAR EM TODOS OS LINKS
-     if (trafficParams.toString()) {
-          var navLinks = document.querySelectorAll('a');
-          navLinks.forEach(function(item) {
-               if (item.href.indexOf('https://') !== -1) {
-                    if (item.href.indexOf('?') === -1) {
-                         item.href += '?' + trafficParams.toString();
-                    } else {
-                         item.href += '&' + trafficParams.toString();
-                    }
-               }
-          });
-          
-          console.log('[Variante] Links atualizados:', navLinks.length);
-     }
-})();
-</script>`;
-
   // Copiar URL da campanha
   const copyUrl = () => {
     if (fullUrl) {
@@ -88,12 +51,6 @@ export default function EditCampaignPage() {
       navigator.clipboard.writeText(conversionUrl);
       alert('URL copiado!');
     }
-  };
-
-  // Copiar script de tracking
-  const copyTrackingScript = () => {
-    navigator.clipboard.writeText(trackingScript);
-    alert('Script copiado! Cole no HTML das suas variações.');
   };
 
   useEffect(() => {
@@ -449,32 +406,14 @@ export default function EditCampaignPage() {
           )}
         </div>
 
-        {/* ✅ AJUSTE 1: Script de Tracking para Variantes */}
+        {/* ✅ SCRIPT DE TRACKING: Injetado automaticamente pelo Worker! */}
         <div className="border-t pt-6">
-          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-green-900 mb-3">
-              📝 Script de Tracking para as Variações
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">
+              ✅ Tracking Automático Ativado!
             </h4>
-            <p className="text-sm text-green-800 mb-3">
-              Insira o código abaixo em <strong>todas as páginas</strong> que você cadastrou como variação nesta campanha, antes da tag <code>&lt;/body&gt;</code>:
-            </p>
-            <div className="relative">
-              <textarea
-                readOnly
-                value={trackingScript}
-                className="w-full h-48 font-mono text-xs bg-white border-2 border-green-300 rounded px-3 py-2 text-gray-900"
-              />
-              <Button
-                type="button"
-                onClick={copyTrackingScript}
-                className="absolute top-2 right-2 bg-green-600 hover:bg-green-700"
-                size="sm"
-              >
-                📋 Copiar Script
-              </Button>
-            </div>
-            <p className="text-xs text-green-700 mt-2">
-              Este script garante que o utm_term (ID de rastreamento) seja aplicado em todos os links da página, permitindo rastreamento completo de conversões.
+            <p className="text-sm text-blue-800">
+              O script de tracking é <strong>injetado automaticamente</strong> pelo Cloudflare Worker em todas as variações desta campanha. Você <strong>não precisa</strong> adicionar nenhum código manualmente nas suas páginas! 🎉
             </p>
           </div>
         </div>

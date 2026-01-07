@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+// /app/api/dashboard/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -11,149 +12,177 @@ export async function GET() {
     }
 
     const userId = parseInt(session.user.id);
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // Buscar usuário com limites
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: {
-        plan: true,
-        maxCampaigns: true,
-        maxVariations: true,
-        maxClicks: true,
-        maxDomains: true,
+    // ✅ BUSCAR TODAS AS CAMPANHAS DO USUÁRIO
+    const campaigns = await db.campaign.findMany({
+      where: { userId },
+      include: {
+        variations: true,
+        customDomain: true
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
     });
 
-    // Contar recursos em uso
-    const [campaignsCount, webhooksCount, domainsCount] = await Promise.all([
-      db.campaign.count({ where: { userId } }),
-      db.webhookConfiguration.count({ where: { userId } }),
-      db.customDomain.count({ where: { userId } }),
-    ]);
-
-    // ✅ Estatísticas dos últimos 7 dias - USANDO CLICK E CONVERSION COM GMT-3
-    const stats = await db.$queryRaw<any[]>`
-      SELECT 
-        COUNT(DISTINCT cl.id) as total_views,
-        COUNT(DISTINCT co.id) as total_conversions,
-        0 as total_purchases,
-        0 as total_revenue,
-        
-        COALESCE(
-          ROUND(
-            CAST(
-              COUNT(DISTINCT co.id) * 100.0 / 
-              NULLIF(COUNT(DISTINCT cl.id), 0)
-              AS numeric
-            ),
-            2
-          ),
-          0
-        ) as conversion_rate,
-        
-        0 as purchase_rate,
-        0 as avg_order_value
-        
-      FROM "Campaign" c
-      LEFT JOIN "Click" cl ON c.id = cl."campaignId"
-        AND cl."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
-      LEFT JOIN "Conversion" co ON c.id = co."campaignId"
-        AND co."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
-      WHERE c."userId" = ${userId}
-    `;
-
-    const currentStats = stats[0] || {
-      total_views: 0,
-      total_conversions: 0,
-      total_purchases: 0,
-      total_revenue: 0,
-      conversion_rate: 0,
-      purchase_rate: 0,
-      avg_order_value: 0,
-    };
-
-    // ✅ Timeline dos últimos 7 dias - USANDO CLICK E CONVERSION COM GMT-3
-    const timeline = await db.$queryRaw<any[]>`
-      SELECT 
-        date::date,
-        COALESCE(SUM(views), 0) as views,
-        COALESCE(SUM(conversions), 0) as conversions,
-        0 as purchases
-      FROM (
-        SELECT 
-          DATE(cl."createdAt" AT TIME ZONE 'America/Sao_Paulo') as date,
-          COUNT(*) as views,
-          0 as conversions
-        FROM "Click" cl
-        INNER JOIN "Campaign" c ON cl."campaignId" = c.id
-        WHERE c."userId" = ${userId}
-          AND cl."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
-        GROUP BY DATE(cl."createdAt" AT TIME ZONE 'America/Sao_Paulo')
-        
-        UNION ALL
-        
-        SELECT 
-          DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') as date,
-          0 as views,
-          COUNT(*) as conversions
-        FROM "Conversion" co
-        INNER JOIN "Campaign" c ON co."campaignId" = c.id
-        WHERE c."userId" = ${userId}
-          AND co."createdAt" AT TIME ZONE 'America/Sao_Paulo' >= ${sevenDaysAgo}
-        GROUP BY DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo')
-      ) combined
-      GROUP BY date
-      ORDER BY date ASC
-    `;
-
-    // ✅ Contar clicks do mês atual - USANDO CLICK COM GMT-3
-    const currentMonth = new Date();
-    currentMonth.setDate(1);
-    currentMonth.setHours(0, 0, 0, 0);
-
-    const clicksThisMonth = await db.click.count({
+    // ✅ BUSCAR TODAS AS VIEWS (CLICKS) DO USUÁRIO
+    const allClicks = await db.click.findMany({
       where: {
-        campaign: { userId },
-        createdAt: { gte: currentMonth }
+        campaign: {
+          userId
+        }
+      },
+      select: {
+        id: true,
+        campaignId: true,
+        createdAt: true
+      }
+    });
+
+    // ✅ BUSCAR TODAS AS CONVERSÕES SECUNDÁRIAS (CHECKOUTS) DO USUÁRIO
+    const allCheckouts = await db.event.findMany({
+      where: {
+        eventType: 'checkout',
+        campaign: {
+          userId
+        }
+      },
+      select: {
+        id: true,
+        campaignId: true,
+        createdAt: true
+      }
+    });
+
+    // ✅ BUSCAR TODAS AS COMPRAS (PURCHASES) DO USUÁRIO - CORRIGIDO!
+    const allPurchases = await db.event.findMany({
+      where: {
+        eventType: 'purchase', // ✅ ISSO ESTAVA FALTANDO!
+        OR: [
+          // Purchases rastreadas (com campaignId)
+          {
+            campaign: {
+              userId
+            }
+          },
+          // Purchases não rastreadas (sem campaignId mas com userId direto)
+          {
+            userId,
+            campaignId: null
+          }
+        ]
+      },
+      select: {
+        id: true,
+        campaignId: true,
+        eventValue: true,
+        createdAt: true
+      }
+    });
+
+    console.log('[Dashboard] User:', userId);
+    console.log('[Dashboard] Campaigns:', campaigns.length);
+    console.log('[Dashboard] Total Clicks:', allClicks.length);
+    console.log('[Dashboard] Total Checkouts:', allCheckouts.length);
+    console.log('[Dashboard] Total Purchases:', allPurchases.length);
+    console.log('[Dashboard] Total Revenue:', allPurchases.reduce((sum, p) => sum + (p.eventValue || 0), 0));
+
+    // ✅ CALCULAR MÉTRICAS GERAIS
+    const totalClicks = allClicks.length;
+    const totalCheckouts = allCheckouts.length;
+    const totalPurchases = allPurchases.length;
+    const totalRevenue = allPurchases.reduce((sum, p) => sum + (p.eventValue || 0), 0);
+
+    // ✅ CALCULAR MÉTRICAS POR CAMPANHA
+    const campaignsWithMetrics = campaigns.map(campaign => {
+      const campaignClicks = allClicks.filter(c => c.campaignId === campaign.id);
+      const campaignCheckouts = allCheckouts.filter(c => c.campaignId === campaign.id);
+      const campaignPurchases = allPurchases.filter(p => p.campaignId === campaign.id);
+      
+      const revenue = campaignPurchases.reduce((sum, p) => sum + (p.eventValue || 0), 0);
+      const clicks = campaignClicks.length;
+      const checkouts = campaignCheckouts.length;
+      const purchases = campaignPurchases.length;
+
+      return {
+        id: campaign.id,
+        name: campaign.name,
+        slug: campaign.slug,
+        domain: campaign.customDomain?.domain || null,
+        isActive: campaign.isActive,
+        variations: campaign.variations.length,
+        metrics: {
+          views: clicks,
+          checkouts: checkouts,
+          purchases: purchases, // ✅ AGORA VAI CONTAR!
+          revenue: revenue, // ✅ AGORA VAI SOMAR!
+          checkoutRate: clicks > 0 ? (checkouts / clicks * 100) : 0,
+          purchaseRate: clicks > 0 ? (purchases / clicks * 100) : 0
+        },
+        createdAt: campaign.createdAt
+      };
+    });
+
+    // ✅ ÚLTIMAS CONVERSÕES (PURCHASES)
+    const recentPurchases = await db.event.findMany({
+      where: {
+        eventType: 'purchase',
+        OR: [
+          {
+            campaign: {
+              userId
+            }
+          },
+          {
+            userId,
+            campaignId: null
+          }
+        ]
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 10,
+      select: {
+        id: true,
+        eventName: true,
+        eventValue: true,
+        createdAt: true,
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        },
+        variation: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     });
 
     return NextResponse.json({
-      planLimits: {
-        maxCampaigns: user?.maxCampaigns || 0,
-        maxClicks: user?.maxClicks || 0,
-        maxDomains: user?.maxDomains || 0,
+      summary: {
+        totalCampaigns: campaigns.length,
+        totalClicks: totalClicks,
+        totalCheckouts: totalCheckouts,
+        totalPurchases: totalPurchases, // ✅ AGORA VAI CONTAR!
+        totalRevenue: totalRevenue, // ✅ AGORA VAI SOMAR!
+        checkoutRate: totalClicks > 0 ? (totalCheckouts / totalClicks * 100) : 0,
+        purchaseRate: totalClicks > 0 ? (totalPurchases / totalClicks * 100) : 0,
+        avgOrderValue: totalPurchases > 0 ? (totalRevenue / totalPurchases) : 0
       },
-      usage: {
-        campaigns: campaignsCount,
-        clicks: clicksThisMonth,
-        domains: domainsCount,
-      },
-      totalViews: parseInt(currentStats.total_views || '0'),
-      totalConversions: parseInt(currentStats.total_conversions || '0'),
-      totalPurchases: parseInt(currentStats.total_purchases || '0'),
-      totalRevenue: parseFloat(currentStats.total_revenue || '0'),
-      conversionRate: parseFloat(currentStats.conversion_rate || '0'),
-      purchaseRate: parseFloat(currentStats.purchase_rate || '0'),
-      avgOrderValue: parseFloat(currentStats.avg_order_value || '0'),
-      avgConversionRate: parseFloat(currentStats.conversion_rate || '0'),
-      webhooksCount,
-      domainsCount,
-      timeline: timeline.map(t => ({
-        date: t.date.toISOString().split('T')[0],
-        views: parseInt(t.views || '0'),
-        conversions: parseInt(t.conversions || '0'),
-        purchases: parseInt(t.purchases || '0'),
-      })),
+      campaigns: campaignsWithMetrics,
+      recentPurchases: recentPurchases
     });
+
   } catch (error) {
-    console.error('Error in dashboard stats:', error);
+    console.error('[Dashboard API] Error:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to fetch dashboard stats',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Failed to fetch dashboard data' },
       { status: 500 }
     );
   }
