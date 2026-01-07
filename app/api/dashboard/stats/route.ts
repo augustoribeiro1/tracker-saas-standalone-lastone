@@ -16,9 +16,24 @@ export async function GET(request: NextRequest) {
     // ✅ BUSCAR TODAS AS CAMPANHAS DO USUÁRIO
     const campaigns = await db.campaign.findMany({
       where: { userId },
-      include: {
-        variations: true,
-        customDomain: true
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        isActive: true, // ✅ ADICIONAR isActive ao select
+        createdAt: true,
+        customDomain: {
+          select: {
+            id: true,
+            domain: true
+          }
+        },
+        variations: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
