@@ -102,19 +102,37 @@ export async function POST(request: NextRequest) {
     // Validar domínio se fornecido
     let selectedDomain = null;
     if (customDomainId) {
+      // ✅ Buscar domínio pelo ID (sem filtrar por userId ainda)
       selectedDomain = await db.customDomain.findFirst({
         where: {
-          id: parseInt(customDomainId),
-          userId: user.id
+          id: parseInt(customDomainId)
         }
       });
 
       if (!selectedDomain) {
         return NextResponse.json(
+          { error: 'Domínio não encontrado' },
+          { status: 400 }
+        );
+      }
+
+      // ✅ Verificar se é domínio padrão do sistema
+      const isSystemDomain = selectedDomain.domain === 'app.split2.com.br';
+
+      // ✅ Domínio padrão: permitido para todos
+      // ✅ Domínio personalizado: verificar ownership
+      if (!isSystemDomain && selectedDomain.userId !== user.id) {
+        return NextResponse.json(
           { error: 'Domínio selecionado não pertence a você' },
           { status: 400 }
         );
       }
+
+      console.log('[Create Campaign] Domínio validado:', {
+        domain: selectedDomain.domain,
+        isSystem: isSystemDomain,
+        userId: user.id
+      });
     }
 
     // ✅ VERIFICAR SE É DOMÍNIO PADRÃO DO SISTEMA
