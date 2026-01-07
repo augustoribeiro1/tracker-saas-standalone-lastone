@@ -112,6 +112,8 @@ export default function EditCampaignPage() {
   // ✅ FUNÇÃO PARA RESETAR DADOS DA CAMPANHA
   const handleReset = async () => {
     try {
+      console.log('[Reset] Sending request...');
+      
       const res = await fetch(`/api/campaigns/${params.id}/reset`, {
         method: 'POST',
         headers: {
@@ -122,7 +124,27 @@ export default function EditCampaignPage() {
         })
       });
 
-      const data = await res.json();
+      console.log('[Reset] Response status:', res.status);
+      console.log('[Reset] Response ok:', res.ok);
+
+      // Verificar se resposta tem conteúdo
+      const contentType = res.headers.get('content-type');
+      console.log('[Reset] Content-Type:', contentType);
+
+      let data;
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await res.json();
+          console.log('[Reset] Response data:', data);
+        } catch (jsonError) {
+          console.error('[Reset] Failed to parse JSON:', jsonError);
+          throw new Error('Resposta inválida do servidor');
+        }
+      } else {
+        const text = await res.text();
+        console.log('[Reset] Response text:', text);
+        throw new Error('Resposta não é JSON');
+      }
 
       if (!res.ok) {
         throw new Error(data.error || 'Erro ao resetar campanha');
@@ -133,6 +155,7 @@ export default function EditCampaignPage() {
       // Recarregar a página para atualizar contadores
       window.location.reload();
     } catch (err: any) {
+      console.error('[Reset] Error:', err);
       alert(`❌ Erro ao resetar campanha: ${err.message}`);
       throw err;
     }

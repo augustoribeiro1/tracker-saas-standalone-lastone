@@ -91,7 +91,7 @@ export function ResetCampaignModal({ isOpen, onClose, onConfirm, campaignName }:
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="Digite aqui..."
-              className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:border-red-500 focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border-2 border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
               disabled={loading}
             />
             {error && (
