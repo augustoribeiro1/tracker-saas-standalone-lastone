@@ -19,6 +19,15 @@ export default function CampaignsPage() {
         setLoading(false);
       });
   };
+  
+    const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'nn';
+      case 'inactive': return 'Inativo';
+      case 'pending': return 'Pendente';
+      default: return status;
+    }
+  };
 
   const deleteCampaign = async (id: number, name: string) => {
     if (!confirm(`Tem certeza que deseja deletar a campanha "${name}"? Todos os dados serão perdidos!`)) {
