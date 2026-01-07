@@ -68,23 +68,14 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // ✅ BUSCAR TODAS AS COMPRAS (PURCHASES) DO USUÁRIO - CORRIGIDO!
+    // ✅ BUSCAR APENAS COMPRAS (PURCHASES) DE CAMPANHAS ATIVAS
     const allPurchases = await db.event.findMany({
       where: {
-        eventType: 'purchase', // ✅ ISSO ESTAVA FALTANDO!
-        OR: [
-          // Purchases rastreadas (com campaignId)
-          {
-            campaign: {
-              userId
-            }
-          },
-          // Purchases não rastreadas (sem campaignId mas com userId direto)
-          {
-            userId,
-            campaignId: null
-          }
-        ]
+        eventType: 'purchase',
+        // ✅ APENAS purchases vinculadas a campanhas
+        campaign: {
+          userId
+        }
       },
       select: {
         id: true,
@@ -136,21 +127,14 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // ✅ ÚLTIMAS CONVERSÕES (PURCHASES)
+    // ✅ ÚLTIMAS CONVERSÕES (PURCHASES) - APENAS DE CAMPANHAS
     const recentPurchases = await db.event.findMany({
       where: {
         eventType: 'purchase',
-        OR: [
-          {
-            campaign: {
-              userId
-            }
-          },
-          {
-            userId,
-            campaignId: null
-          }
-        ]
+        // ✅ APENAS purchases vinculadas a campanhas
+        campaign: {
+          userId
+        }
       },
       orderBy: {
         createdAt: 'desc'
