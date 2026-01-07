@@ -1,6 +1,4 @@
 // /lib/plan-limits.ts
-// Configuração de limites por plano
-
 export const PLAN_LIMITS = {
   1: { // FREE
     name: 'Free',
@@ -33,8 +31,25 @@ export const PLAN_LIMITS = {
 
 export type PlanId = keyof typeof PLAN_LIMITS;
 
+// ✅ CONVERTER NOME DO PLANO (string) PARA ID (number)
+export function planNameToId(planName: string): number {
+  const normalized = planName.toLowerCase();
+  switch (normalized) {
+    case 'free': return 1;
+    case 'starter': return 2;
+    case 'pro': return 3;
+    default: return 1; // Default para FREE
+  }
+}
+
 export function getPlanLimits(planId: number) {
   return PLAN_LIMITS[planId as PlanId] || PLAN_LIMITS[1];
+}
+
+// ✅ NOVA: Aceita string ou number
+export function getPlanLimitsByName(plan: string | number) {
+  const planId = typeof plan === 'string' ? planNameToId(plan) : plan;
+  return getPlanLimits(planId);
 }
 
 export function canAddCampaign(planId: number, currentCount: number): boolean {

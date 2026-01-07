@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { PlanLimitReached } from '@/components/PlanLimitReached';
-import { getPlanLimits } from '@/lib/plan-limits';
+import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
 
 export default function DomainsPage() {
   const { data: session } = useSession();
@@ -167,7 +167,7 @@ export default function DomainsPage() {
           current={limits.current}
           max={limits.max}
           planName={limits.plan}
-          upgradeMessage={getPlanLimits(session?.user?.planId || 1).upgradeMessage}
+          upgradeMessage={getPlanLimits(planNameToId(session?.user?.plan || 'free')).upgradeMessage}
         />
       )}
 

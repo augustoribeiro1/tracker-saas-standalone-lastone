@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { getPlanLimits } from '@/lib/plan-limits';
+import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = parseInt(session.user.id);
-    const userPlanId = session.user.planId || 1;
+    const userPlanId = planNameToId(session.user.plan || 'free');
 
     // ✅ BUSCAR DOMÍNIO PADRÃO DO SISTEMA
     const systemDomain = await db.customDomain.findFirst({
