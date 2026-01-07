@@ -1,12 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { ResetCampaignModal } from '@/components/ResetCampaignModal';
 
 export default function EditCampaignPage() {
   const router = useRouter();
   const params = useParams();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
@@ -60,10 +62,10 @@ export default function EditCampaignPage() {
     fetchDomains();
   }, []);
 
-  // ✅ AJUSTE 3: Buscar APENAS domínios ativos
+  // ✅ Buscar domínios (inclui domínio padrão do sistema)
   const fetchDomains = async () => {
     try {
-      const res = await fetch('/api/domains');
+      const res = await fetch('/api/domains/list');
       const data = await res.json();
       // ✅ Filtrar apenas domínios com status 'active'
       const activeDomains = (data.domains || []).filter((d: any) => d.status === 'active');
@@ -249,15 +251,26 @@ export default function EditCampaignPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Slug (URL)
+            {selectedDomain?.domain === 'app.split2.com.br' && (
+              <span className="ml-2 text-xs text-gray-500">(Não editável em domínio padrão)</span>
+            )}
+          </label>
           <input
             type="text"
             required
             value={formData.slug}
             onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
-            className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+            className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
             placeholder="black-friday"
+            disabled={selectedDomain?.domain === 'app.split2.com.br'}
           />
+          {selectedDomain?.domain === 'app.split2.com.br' && (
+            <p className="mt-1 text-xs text-yellow-600">
+              ⚠️ Slug contém prefixo de usuário e não pode ser editado para manter unicidade
+            </p>
+          )}
         </div>
 
         {/* Seletor de Domínio */}
@@ -265,30 +278,25 @@ export default function EditCampaignPage() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Domínio de Tracking <span className="text-red-500">*</span>
           </label>
-          {domains.length === 0 ? (
-            <div className="rounded-md bg-yellow-50 p-4">
-              <p className="text-sm text-yellow-800">
-                Você precisa configurar um domínio customizado ativo para criar campanhas.{' '}
-                <a href="/domains" className="font-medium text-yellow-900 underline hover:text-yellow-700">
-                  Adicionar domínio agora
-                </a>
-              </p>
-            </div>
-          ) : (
-            <select
-              required
-              value={formData.customDomainId}
-              onChange={e => setFormData({...formData, customDomainId: e.target.value})}
-              className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
-            >
-              <option value="">Selecione um domínio</option>
-              {domains.map(domain => (
-                <option key={domain.id} value={domain.id}>
-                  {domain.domain} ✅
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            required
+            value={formData.customDomainId}
+            onChange={e => setFormData({...formData, customDomainId: e.target.value})}
+            className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+          >
+            <option value="">Selecione um domínio</option>
+            {domains.map(domain => (
+              <option key={domain.id} value={domain.id}>
+                {domain.domain} {domain.isDefault ? '(Padrão)' : '✅'}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-gray-500">
+            {selectedDomain?.domain === 'app.split2.com.br' 
+              ? '💡 Domínio padrão do sistema - disponível para todos'
+              : 'Domínio personalizado'
+            }
+          </p>
         </div>
 
         {/* ✅ AJUSTE 2: URL Completo com botão Copiar (AGORA VISÍVEL NO EDIT) */}

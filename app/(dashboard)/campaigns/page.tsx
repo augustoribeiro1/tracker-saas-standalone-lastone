@@ -1,9 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
+import { PlanLimitReached } from '@/components/PlanLimitReached';
 
 export default function CampaignsPage() {
+  const { data: session } = useSession();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,23 +66,46 @@ export default function CampaignsPage() {
 
   if (loading) return <div className="p-6">Carregando...</div>;
 
+  // ✅ VERIFICAR LIMITE DE CAMPANHAS
+  const userPlan = session?.user?.plan || 'free';
+  const planId = planNameToId(userPlan);
+  const limits = getPlanLimits(planId);
+  const canAddCampaign = campaigns.length < limits.campaigns;
+
   return (
     <div className="px-4 sm:px-6 lg:px-8">
       <div className="sm:flex sm:items-center mb-6">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Campanhas</h1>
         </div>
-        <Link href="/campaigns/new">
-          <Button>Nova Campanha</Button>
-        </Link>
+        {canAddCampaign ? (
+          <Link href="/campaigns/new">
+            <Button>Nova Campanha</Button>
+          </Link>
+        ) : null}
       </div>
+
+      {/* ✅ ALERTA DE LIMITE ATINGIDO */}
+      {!canAddCampaign && (
+        <div className="mb-6">
+          <PlanLimitReached
+            resource="campanhas"
+            current={campaigns.length}
+            max={limits.campaigns}
+            planName={limits.name}
+            upgradeMessage={limits.upgradeMessage}
+          />
+        </div>
+      )}
 
       {campaigns.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 mb-4">Nenhuma campanha ainda</p>
-          <Link href="/campaigns/new">
-            <Button>Criar Primeira Campanha</Button>
-          </Link>
+          {canAddCampaign && (
+            <Link href="/campaigns/new">
+              <Button>Criar Primeira Campanha</Button>
+            </Link>
+          )}
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
