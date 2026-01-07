@@ -80,6 +80,7 @@ model Campaign {
   customDomainId           Int?
   enableSecondaryConversion Boolean  @default(false)
   checkoutUrl              String?
+  isSystemDefault     		Boolean   @default(false)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
   
