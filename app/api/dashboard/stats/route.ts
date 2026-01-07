@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         slug: true,
-        isActive: true, // ✅ ADICIONAR isActive ao select
         createdAt: true,
         customDomain: {
           select: {
@@ -124,7 +123,6 @@ export async function GET(request: NextRequest) {
         name: campaign.name,
         slug: campaign.slug,
         domain: campaign.customDomain?.domain || null,
-        isActive: campaign.isActive,
         variations: campaign.variations.length,
         metrics: {
           views: clicks,
