@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         name,
         slug: slug.toLowerCase(),
         userId: user.id,
-        status: 'active',
+        status: 'Ativo',
         customDomainId: customDomainId ? parseInt(customDomainId) : null,
         enableSecondaryConversion: enableSecondaryConversion || false,
         checkoutUrl: enableSecondaryConversion ? checkoutUrl : null,
