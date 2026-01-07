@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { ResetCampaignModal } from '@/components/ResetCampaignModal';
 
 export default function EditCampaignPage() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function EditCampaignPage() {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
   const [domains, setDomains] = useState<any[]>([]);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -105,6 +107,35 @@ export default function EditCampaignPage() {
       return url;
     }
     return 'https://' + url;
+  };
+
+  // ✅ FUNÇÃO PARA RESETAR DADOS DA CAMPANHA
+  const handleReset = async () => {
+    try {
+      const res = await fetch(`/api/campaigns/${params.id}/reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          confirmation: 'resetar campanha'
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao resetar campanha');
+      }
+
+      alert(`✅ Campanha resetada com sucesso!\n\n${data.deleted.total} registros apagados:\n- ${data.deleted.clicks} views\n- ${data.deleted.events} eventos`);
+      
+      // Recarregar a página para atualizar contadores
+      window.location.reload();
+    } catch (err: any) {
+      alert(`❌ Erro ao resetar campanha: ${err.message}`);
+      throw err;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -418,6 +449,25 @@ export default function EditCampaignPage() {
           </div>
         </div>
 
+        {/* ⚠️ ZONA DE PERIGO: RESETAR DADOS */}
+        <div className="border-t pt-6">
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-red-900 mb-2 flex items-center gap-2">
+              ⚠️ Zona de Perigo
+            </h4>
+            <p className="text-sm text-red-800 mb-3">
+              Resetar os dados da campanha irá apagar <strong>permanentemente</strong> todas as views, conversões e compras registradas. Esta ação não pode ser desfeita.
+            </p>
+            <Button
+              type="button"
+              onClick={() => setShowResetModal(true)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              🗑️ Resetar Dados da Campanha
+            </Button>
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <Button
             type="button"
@@ -432,6 +482,14 @@ export default function EditCampaignPage() {
           </Button>
         </div>
       </form>
+
+      {/* ✅ MODAL DE CONFIRMAÇÃO DE RESET */}
+      <ResetCampaignModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={handleReset}
+        campaignName={formData.name}
+      />
     </div>
   );
 }
