@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { getPlanLimits, planNameToId, canAddCampaign } from '@/lib/plan-limits';
+import { generateSlugWithUserId } from '@/lib/generate-slug';
 
 // GET /api/campaigns - Listar campanhas do usuário
 export async function GET(request: NextRequest) {
@@ -62,6 +64,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
+    // ✅ VERIFICAR LIMITE DE CAMPANHAS DO PLANO
+    const userPlan = user.plan || 'free';
+    const planId = planNameToId(userPlan);
+    const planLimits = getPlanLimits(planId);
+    
+    const currentCampaignsCount = await db.campaign.count({
+      where: { userId: user.id }
+    });
+
+    if (!canAddCampaign(planId, currentCampaignsCount)) {
+      return NextResponse.json({
+        error: `Limite de campanhas atingido. Seu plano ${planLimits.name} permite ${planLimits.campaigns} campanha(s).`,
+        limit: planLimits.campaigns,
+        current: currentCampaignsCount
+      }, { status: 403 });
+    }
+
     const body = await request.json();
     const { name, slug, variations, customDomainId, enableSecondaryConversion, checkoutUrl } = body;
 
@@ -81,15 +100,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar domínio se fornecido
+    let selectedDomain = null;
     if (customDomainId) {
-      const domainExists = await db.customDomain.findFirst({
+      selectedDomain = await db.customDomain.findFirst({
         where: {
           id: parseInt(customDomainId),
           userId: user.id
         }
       });
 
-      if (!domainExists) {
+      if (!selectedDomain) {
         return NextResponse.json(
           { error: 'Domínio selecionado não pertence a você' },
           { status: 400 }
@@ -97,9 +117,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ✅ GERAR SLUG COM USERID SE DOMÍNIO PADRÃO
+    let finalSlug = slug.toLowerCase();
+    
+    // Verificar se é domínio padrão do sistema
+    const isDefaultDomain = customDomainId ? 
+      selectedDomain?.domain === 'app.split2.com.br' : 
+      false;
+
+    if (isDefaultDomain) {
+      // Gerar slug com prefixo de userId: 17-abc123de
+      finalSlug = generateSlugWithUserId(user.id);
+      console.log('[Create Campaign] Domínio padrão detectado, slug gerado:', finalSlug);
+    }
+
     // Verificar se slug já existe
     const existing = await db.campaign.findFirst({
-      where: { slug, userId: user.id }
+      where: { 
+        slug: finalSlug, 
+        customDomainId: customDomainId ? parseInt(customDomainId) : null
+      }
     });
 
     if (existing) {
@@ -113,7 +150,7 @@ export async function POST(request: NextRequest) {
     const campaign = await db.campaign.create({
       data: {
         name,
-        slug: slug.toLowerCase(),
+        slug: finalSlug, // ✅ Usar slug gerado (com userId se domínio padrão)
         userId: user.id,
         status: 'active',
         customDomainId: customDomainId ? parseInt(customDomainId) : null,

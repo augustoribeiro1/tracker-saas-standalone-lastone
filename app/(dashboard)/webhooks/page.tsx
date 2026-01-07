@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { WEBHOOK_PLATFORMS } from '@/lib/webhook-platforms';
+import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
+import { PlanLimitReached } from '@/components/PlanLimitReached';
 
 export default function WebhooksPage() {
+  const { data: session } = useSession();
   const [webhooks, setWebhooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -138,23 +142,40 @@ export default function WebhooksPage() {
         </p>
       </div>
 
-      {/* ✅ BOTÃO ADICIONAR NOVO */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-medium text-gray-900">Adicionar Plataforma</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Selecione uma plataforma de checkout para integrar
-            </p>
+      {/* ✅ BOTÃO ADICIONAR NOVO OU LIMITE ATINGIDO */}
+      {(() => {
+        const userPlan = session?.user?.plan || 'free';
+        const planId = planNameToId(userPlan);
+        const limits = getPlanLimits(planId);
+        const canAdd = webhooks.length < limits.webhooks;
+
+        return canAdd ? (
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900">Adicionar Plataforma</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Selecione uma plataforma de checkout para integrar ({webhooks.length}/{limits.webhooks} em uso)
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowPlatformModal(true)}
+                className="flex items-center gap-2"
+              >
+                <span>➕</span> Adicionar Novo
+              </Button>
+            </div>
           </div>
-          <Button
-            onClick={() => setShowPlatformModal(true)}
-            className="flex items-center gap-2"
-          >
-            <span>➕</span> Adicionar Novo
-          </Button>
-        </div>
-      </div>
+        ) : (
+          <PlanLimitReached
+            resource="checkouts"
+            current={webhooks.length}
+            max={limits.webhooks}
+            planName={limits.name}
+            upgradeMessage={limits.upgradeMessage}
+          />
+        );
+      })()}
 
       {/* Webhooks Ativos */}
       <div className="bg-white shadow rounded-lg overflow-hidden">

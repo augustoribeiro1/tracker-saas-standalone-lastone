@@ -1,18 +1,24 @@
 // /lib/generate-slug.ts
-// Gerador de slugs únicos para campanhas no domínio padrão
-
 import { customAlphabet } from 'nanoid';
 
-// Alfabeto sem caracteres ambíguos (sem 0, O, I, l, 1)
 const nanoid = customAlphabet('23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz', 8);
 
 /**
  * Gera um slug único de 8 caracteres
  * Formato: abc123de
- * Usado para campanhas no domínio padrão app.split2.com.br
  */
 export function generateUniqueSlug(): string {
   return nanoid();
+}
+
+/**
+ * Gera slug com prefixo de userId para domínio padrão
+ * Formato: 17-abc123de
+ * @param userId - ID do usuário
+ */
+export function generateSlugWithUserId(userId: number): string {
+  const randomPart = nanoid();
+  return `${userId}-${randomPart}`;
 }
 
 /**

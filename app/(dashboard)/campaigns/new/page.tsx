@@ -1,13 +1,19 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
+import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
+import { PlanLimitReached } from '@/components/PlanLimitReached';
 
 export default function NewCampaignPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [domains, setDomains] = useState<any[]>([]);
+  const [campaignsCount, setCampaignsCount] = useState(0);
+  const [loadingLimits, setLoadingLimits] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -20,24 +26,38 @@ export default function NewCampaignPage() {
     ]
   });
 
-  // ✅ AJUSTE 3: Carregar APENAS domínios ativos
+  // ✅ Carregar domínios e contagem de campanhas
   useEffect(() => {
-    fetch('/api/domains')
-      .then(r => r.json())
-      .then(data => {
-        // ✅ Filtrar apenas domínios com status 'active'
-        const activeDomains = (data.domains || []).filter((d: any) => d.status === 'active');
+    const fetchData = async () => {
+      try {
+        // Buscar domínios (inclui domínio padrão)
+        const domainsRes = await fetch('/api/domains/list');
+        const domainsData = await domainsRes.json();
+        
+        const activeDomains = (domainsData.domains || []).filter((d: any) => d.status === 'active');
         setDomains(activeDomains);
         
-        // Selecionar primeiro domínio ativo automaticamente se houver
+        // Selecionar primeiro domínio ativo automaticamente
         if (activeDomains.length > 0) {
           setFormData(prev => ({
             ...prev,
             customDomainId: activeDomains[0].id.toString()
           }));
         }
-      })
-      .catch(err => console.error('Erro ao carregar domínios:', err));
+
+        // Buscar contagem de campanhas
+        const campaignsRes = await fetch('/api/campaigns');
+        const campaignsData = await campaignsRes.json();
+        setCampaignsCount(campaignsData.campaigns?.length || 0);
+        
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   // Calcular soma total de weights
@@ -144,6 +164,27 @@ export default function NewCampaignPage() {
     <div className="max-w-2xl mx-auto px-4">
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Nova Campanha</h1>
       
+      {/* ✅ VERIFICAR LIMITE DE CAMPANHAS */}
+      {!loadingLimits && (() => {
+        const userPlan = session?.user?.plan || 'free';
+        const planId = planNameToId(userPlan);
+        const limits = getPlanLimits(planId);
+        const canAdd = campaignsCount < limits.campaigns;
+
+        if (!canAdd) {
+          return (
+            <PlanLimitReached
+              resource="campanhas"
+              current={campaignsCount}
+              max={limits.campaigns}
+              planName={limits.name}
+              upgradeMessage={limits.upgradeMessage}
+            />
+          );
+        }
+        return null;
+      })()}
+      
       {error && (
         <div className="mb-4 rounded-md bg-red-50 p-4">
           <div className="text-sm text-red-800">{error}</div>
@@ -164,44 +205,51 @@ export default function NewCampaignPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Slug (URL) {domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br' && '(Opcional)'}
+          </label>
           <input
             type="text"
-            required
+            required={domains.find(d => d.id.toString() === formData.customDomainId)?.domain !== 'app.split2.com.br'}
             value={formData.slug}
             onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
             className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
-            placeholder="black-friday"
+            placeholder={
+              domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br'
+                ? 'Será gerado automaticamente'
+                : 'black-friday'
+            }
+            disabled={domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br'}
           />
+          {domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br' && (
+            <p className="mt-1 text-xs text-gray-500">
+              O slug será gerado automaticamente no formato: seu-id-abc123de
+            </p>
+          )}
         </div>
 
         {/* Seletor de Domínio */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Domínio</label>
-          {domains.length === 0 ? (
-            <div className="rounded-md bg-yellow-50 p-4">
-              <p className="text-sm text-yellow-800">
-                Você precisa adicionar e ativar um domínio customizado primeiro.{' '}
-                <a href="/domains" className="font-medium underline">
-                  Adicionar Domínio
-                </a>
-              </p>
-            </div>
-          ) : (
-            <select
-              required
-              value={formData.customDomainId}
-              onChange={e => setFormData({...formData, customDomainId: e.target.value})}
-              className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
-            >
-              <option value="">Selecione um domínio</option>
-              {domains.map(domain => (
-                <option key={domain.id} value={domain.id}>
-                  {domain.domain} ✅
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            required
+            value={formData.customDomainId}
+            onChange={e => setFormData({...formData, customDomainId: e.target.value})}
+            className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+          >
+            <option value="">Selecione um domínio</option>
+            {domains.map(domain => (
+              <option key={domain.id} value={domain.id}>
+                {domain.domain} {domain.isDefault ? '(Padrão)' : ''}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-gray-500">
+            {domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br' 
+              ? '💡 Slug será gerado automaticamente com seu ID para evitar conflitos'
+              : 'Use um slug único para seu domínio'
+            }
+          </p>
         </div>
 
         {/* ✅ AJUSTE 2: URL Completo com botão Copiar */}
