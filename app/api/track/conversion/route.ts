@@ -97,20 +97,24 @@ export async function POST(request: NextRequest) {
 
     console.log('[/api/track/conversion] Checkout URL:', checkoutUrl);
 
-    // ✅ REGISTRAR CONVERSÃO
+    // ✅ REGISTRAR CONVERSÃO NA TABELA EVENT (NÃO EM CONVERSION!)
     try {
-      await db.conversion.create({
+      await db.event.create({
         data: {
+          eventType: 'checkout',  // ✅ TIPO CORRETO!
+          eventName: 'Secondary Conversion',
           campaignId: campaign.id,
           variationId: variationId,
-          domain: customDomain || 'app.split2.com.br',
-          userAgent: request.headers.get('user-agent') || '',
-          referer: request.headers.get('referer') || null,
-          clickid: clickid || null
+          clickId: clickid || null,
+          userId: campaign.userId,
+          ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                     request.headers.get('x-real-ip') || 
+                     null,
+          userAgent: request.headers.get('user-agent') || null
         }
       });
 
-      console.log('[/api/track/conversion] Conversion recorded! Campaign:', campaign.id, 'Variation:', variationId, 'Clickid:', clickid);
+      console.log('[/api/track/conversion] Checkout event recorded! Campaign:', campaign.id, 'Variation:', variationId, 'Clickid:', clickid);
     } catch (dbError) {
       console.error('[/api/track/conversion] Database error:', dbError);
       // Não falhar se analytics der erro
