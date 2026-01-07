@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, slug, variations, customDomainId, enableSecondaryConversion, checkoutUrl } = body;
 
-    // Validações
-    if (!name || !slug || !variations || variations.length < 2) {
+    // Validações básicas
+    if (!name || !variations || variations.length < 2) {
       return NextResponse.json(
-        { error: 'Nome, slug e pelo menos 2 variações são obrigatórios' },
+        { error: 'Nome e pelo menos 2 variações são obrigatórios' },
         { status: 400 }
       );
     }
@@ -117,18 +117,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ✅ GERAR SLUG COM USERID SE DOMÍNIO PADRÃO
-    let finalSlug = slug.toLowerCase();
-    
-    // Verificar se é domínio padrão do sistema
+    // ✅ VERIFICAR SE É DOMÍNIO PADRÃO DO SISTEMA
     const isDefaultDomain = customDomainId ? 
       selectedDomain?.domain === 'app.split2.com.br' : 
       false;
 
+    // ✅ VALIDAR SLUG: Obrigatório apenas para domínios personalizados
+    if (!isDefaultDomain && (!slug || slug.trim() === '')) {
+      return NextResponse.json(
+        { error: 'Slug é obrigatório para domínios personalizados' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ GERAR SLUG FINAL
+    let finalSlug: string;
+    
     if (isDefaultDomain) {
       // Gerar slug com prefixo de userId: 17-abc123de
       finalSlug = generateSlugWithUserId(user.id);
       console.log('[Create Campaign] Domínio padrão detectado, slug gerado:', finalSlug);
+    } else {
+      // Usar slug fornecido pelo usuário
+      finalSlug = slug.toLowerCase().trim();
+      console.log('[Create Campaign] Domínio personalizado, slug fornecido:', finalSlug);
     }
 
     // Verificar se slug já existe

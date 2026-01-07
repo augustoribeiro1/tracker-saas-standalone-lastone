@@ -130,6 +130,7 @@ export default function NewCampaignPage() {
       // Normalizar URLs antes de enviar
       const normalizedData = {
         ...formData,
+        slug: formData.slug || '', // ✅ Garantir que slug seja string (pode ser vazio para domínio padrão)
         checkoutUrl: formData.checkoutUrl ? normalizeUrl(formData.checkoutUrl) : null,
         variations: formData.variations.map(v => ({
           ...v,
