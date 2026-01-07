@@ -88,26 +88,26 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total de Views"
-          value={stats?.totalViews?.toLocaleString() || '0'}
+          value={stats?.summary?.totalClicks?.toLocaleString() || '0'}
           subtitle="Últimos 7 dias"
           trend={stats?.viewsTrend}
         />
         <StatsCard
           title="Conversão Secundária"
-          value={stats?.totalConversions?.toLocaleString() || '0'}
-          subtitle={`Taxa: ${stats?.conversionRate?.toFixed(2) || '0'}%`}
+          value={stats?.summary?.totalCheckouts?.toLocaleString() || '0'}
+          subtitle={`Taxa: ${stats?.summary?.checkoutRate?.toFixed(2) || '0'}%`}
           trend={stats?.conversionsTrend}
         />
         <StatsCard
           title="Compras"
-          value={stats?.totalPurchases?.toLocaleString() || '0'}
-          subtitle={`Taxa: ${stats?.purchaseRate?.toFixed(2) || '0'}%`}
+          value={stats?.summary?.totalPurchases?.toLocaleString() || '0'}
+          subtitle={`Taxa: ${stats?.summary?.purchaseRate?.toFixed(2) || '0'}%`}
           trend={stats?.purchasesTrend}
         />
         <StatsCard
           title="Receita Total"
-          value={formatCurrency(stats?.totalRevenue || 0)}
-          subtitle={`Ticket: ${formatCurrency(stats?.avgOrderValue || 0)}`}
+          value={formatCurrency(stats?.summary?.totalRevenue || 0)}
+          subtitle={`Ticket: ${formatCurrency(stats?.summary?.avgOrderValue || 0)}`}
           trend={stats?.revenueTrend}
         />
       </div>
