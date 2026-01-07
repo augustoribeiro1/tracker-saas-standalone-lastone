@@ -7,28 +7,6 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Tradução de status
-  const translateStatus = (status: string) => {
-    const translations: Record<string, string> = {
-      'active': 'Ativa',
-      'paused': 'Pausada',
-      'archived': 'Arquivada',
-      'draft': 'Rascunho'
-    };
-    return translations[status] || status;
-  };
-
-  // Cores por status
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'active': 'bg-green-100 text-green-800',
-      'paused': 'bg-yellow-100 text-yellow-800',
-      'archived': 'bg-gray-100 text-gray-800',
-      'draft': 'bg-blue-100 text-blue-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
   useEffect(() => {
     fetchCampaigns();
   }, []);
@@ -42,7 +20,7 @@ export default function CampaignsPage() {
       });
   };
  
-  const deleteCampaign = async (id: number, name: string) => {
+   const deleteCampaign = async (id: number, name: string) => {
     if (!confirm(`Tem certeza que deseja deletar a campanha "${name}"? Todos os dados serão perdidos!`)) {
       return;
     }
@@ -118,8 +96,8 @@ export default function CampaignsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(c.status)}`}>
-                        {translateStatus(c.status)}
+                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                        {c.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right text-sm space-x-3">
