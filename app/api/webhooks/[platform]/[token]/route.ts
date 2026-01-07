@@ -6,12 +6,14 @@ const CLICKID_PREFIX = 'split2_';
 
 /**
  * ✅ BUSCA RECURSIVA MELHORADA (com debug)
+ * Aceita formato: 17-33-split2_FxmROdTF92_f4r6uVs3s
  */
 function findClickIdInObject(obj: any, path: string = 'root'): string | null {
   if (!obj) return null;
 
   // Se for string, verificar se contém split2_
   if (typeof obj === 'string') {
+    // Regex aceita IDs antes do prefixo: 17-33-split2_xxx
     const regex = new RegExp(`${CLICKID_PREFIX}[A-Za-z0-9_-]{20}`, 'g');
     const match = obj.match(regex);
     if (match) {
@@ -312,7 +314,7 @@ export async function POST(
         eventType: 'purchase',
         eventName: productName,
         eventValue: value || 0,
-        clickId: click.id,
+        clickId: click.clickid, // ✅ Usar clickid (string) não id (number)
         campaignId: click.campaignId,
         variationId: click.variationId
       }
