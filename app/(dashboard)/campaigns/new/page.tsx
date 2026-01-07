@@ -66,13 +66,23 @@ export default function NewCampaignPage() {
 
   // Gerar URL completo
   const selectedDomain = domains.find(d => d.id.toString() === formData.customDomainId);
-  const fullUrl = selectedDomain && formData.slug
-    ? `https://${selectedDomain.domain}/r/${formData.slug}`
+  const isDefaultDomain = selectedDomain?.domain === 'app.split2.com.br';
+  
+  // ✅ NOVO: Obter userId da sessão
+  const userId = session?.user?.id || '';
+  
+  // ✅ NOVO: Gerar preview da URL com prefixo se domínio padrão
+  const slugPreview = isDefaultDomain && formData.slug
+    ? `${userId}-${formData.slug}`
+    : formData.slug;
+  
+  const fullUrl = selectedDomain && (isDefaultDomain ? slugPreview : formData.slug)
+    ? `https://${selectedDomain.domain}/r/${isDefaultDomain ? slugPreview : formData.slug}`
     : '';
 
   // Gerar URL de conversão secundária
-  const conversionUrl = selectedDomain && formData.slug
-    ? `https://${selectedDomain.domain}/c/${formData.slug}`
+  const conversionUrl = selectedDomain && (isDefaultDomain ? slugPreview : formData.slug)
+    ? `https://${selectedDomain.domain}/c/${isDefaultDomain ? slugPreview : formData.slug}`
     : '';
 
   // Copiar URL para clipboard
@@ -205,27 +215,41 @@ export default function NewCampaignPage() {
           />
         </div>
 
+        {/* ✅ CAMPO SLUG COM PREFIXO VISUAL */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Slug (URL) {domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br' && '(Opcional)'}
+            Slug (URL)
           </label>
-          <input
-            type="text"
-            required={domains.find(d => d.id.toString() === formData.customDomainId)?.domain !== 'app.split2.com.br'}
-            value={formData.slug}
-            onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
-            className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
-            placeholder={
-              domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br'
-                ? 'Será gerado automaticamente'
-                : 'black-friday'
-            }
-            disabled={domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br'}
-          />
-          {domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br' && (
-            <p className="mt-1 text-xs text-gray-500">
-              O slug será gerado automaticamente no formato: seu-id-abc123de
-            </p>
+          {isDefaultDomain ? (
+            <div>
+              <div className="flex items-center">
+                <span className="inline-flex items-center px-3 py-2 rounded-l-md border-2 border-r-0 border-gray-300 bg-gray-50 text-gray-600 text-sm font-mono">
+                  {userId}-
+                </span>
+                <input
+                  type="text"
+                  required
+                  value={formData.slug}
+                  onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
+                  className="flex-1 rounded-r-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+                  placeholder="black-friday"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                💡 URL final: app.split2.com.br/r/{userId}-{formData.slug || 'seu-slug'}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <input
+                type="text"
+                required
+                value={formData.slug}
+                onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
+                className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
+                placeholder="black-friday"
+              />
+            </div>
           )}
         </div>
 
@@ -246,8 +270,8 @@ export default function NewCampaignPage() {
             ))}
           </select>
           <p className="mt-2 text-xs text-gray-500">
-            {domains.find(d => d.id.toString() === formData.customDomainId)?.domain === 'app.split2.com.br' 
-              ? '💡 Slug será gerado automaticamente com seu ID para evitar conflitos'
+            {isDefaultDomain 
+              ? '💡 Seu ID será adicionado automaticamente como prefixo do slug para evitar conflitos'
               : 'Use um slug único para seu domínio'
             }
           </p>

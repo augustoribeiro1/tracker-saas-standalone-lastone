@@ -152,11 +152,18 @@ export async function POST(request: NextRequest) {
     let finalSlug: string;
     
     if (isDefaultDomain) {
-      // Gerar slug com prefixo de userId: 17-abc123de
-      finalSlug = generateSlugWithUserId(user.id);
-      console.log('[Create Campaign] Domínio padrão detectado, slug gerado:', finalSlug);
+      // ✅ Concatenar userId + slug fornecido pelo usuário
+      if (slug && slug.trim()) {
+        // Usuário forneceu slug: 17-black-friday
+        finalSlug = `${user.id}-${slug.toLowerCase().trim()}`;
+        console.log('[Create Campaign] Domínio padrão, slug fornecido:', finalSlug);
+      } else {
+        // Usuário não forneceu: gerar aleatório 17-abc123de
+        finalSlug = generateSlugWithUserId(user.id);
+        console.log('[Create Campaign] Domínio padrão, slug gerado:', finalSlug);
+      }
     } else {
-      // Usar slug fornecido pelo usuário
+      // Usar slug fornecido pelo usuário (sem prefixo)
       finalSlug = slug.toLowerCase().trim();
       console.log('[Create Campaign] Domínio personalizado, slug fornecido:', finalSlug);
     }
