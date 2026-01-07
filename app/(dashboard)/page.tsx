@@ -71,9 +71,6 @@ export default function DashboardPage() {
           <Link href="/campaigns/new">
             <Button>Nova Campanha</Button>
           </Link>
-          <Link href="/webhooks">
-            <Button variant="outline">Adicionar Webhook</Button>
-          </Link>
         </div>
       </div>
 
