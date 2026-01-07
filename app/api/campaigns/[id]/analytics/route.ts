@@ -1,177 +1,174 @@
+// /app/api/campaigns/[id]/analytics/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 
-// Helper para converter BigInt em Number (PostgreSQL retorna BigInt em COUNT/SUM)
-function convertBigIntToNumber(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  
-  if (typeof obj === 'bigint') {
-    return Number(obj);
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(convertBigIntToNumber);
-  }
-  
-  if (typeof obj === 'object') {
-    const converted: any = {};
-    for (const key in obj) {
-      converted[key] = convertBigIntToNumber(obj[key]);
-    }
-    return converted;
-  }
-  
-  return obj;
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const campaignId = parseInt(params.id);
-  const { searchParams } = request.nextUrl;
-  
-  // Datas padrão: últimos 30 dias
-  const defaultStartDate = new Date();
-  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
-  defaultStartDate.setHours(0, 0, 0, 0);
-  
-  const defaultEndDate = new Date();
-  defaultEndDate.setHours(23, 59, 59, 999);
-  
-  const startDate = searchParams.get('start_date') || defaultStartDate.toISOString();
-  const endDate = searchParams.get('end_date') || defaultEndDate.toISOString();
-  
-  console.log('[Analytics] Fetching data for campaign', campaignId, 'from', startDate, 'to', endDate);
-
-  // Verificar se campanha pertence ao usuário
-  const campaign = await db.campaign.findFirst({
-    where: {
-      id: campaignId,
-      userId: parseInt(session.user.id)
-    },
-    include: {
-      variations: true
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-  });
 
-  if (!campaign) {
-    return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
-  }
+    const campaignId = parseInt(params.id);
+    const userId = parseInt(session.user.id);
+    const { searchParams } = request.nextUrl;
+    
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
 
-  // ✅ BUSCAR MÉTRICAS USANDO TABELAS CLICK E CONVERSION (COM GMT-3)
-  const metricsRaw = await db.$queryRaw`
-    SELECT 
-      v.id as variation_id,
-      v.name as variation_name,
-      
-      COUNT(DISTINCT c.id) as views,
-      COUNT(DISTINCT co.id) as checkouts,
-      0 as purchases,
-      
-      0 as revenue,
-      
-      COALESCE(
-        ROUND(
-          (COUNT(DISTINCT co.id) * 100.0 / 
-          NULLIF(COUNT(DISTINCT c.id), 0))::numeric, 
-          2
-        ),
-        0
-      ) as checkout_rate,
-      
-      0 as purchase_rate,
-      0 as avg_order_value
-      
-    FROM "Variation" v
-    LEFT JOIN "Click" c ON v.id = c."variationId" 
-      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
-      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
-    LEFT JOIN "Conversion" co ON v.id = co."variationId"
-      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
-      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
-    WHERE v."campaignId" = ${campaignId}
-    GROUP BY v.id, v.name
-    ORDER BY views DESC
-  `;
-  
-  // Converter BigInt para Number
-  const metrics = convertBigIntToNumber(metricsRaw);
-  
-  console.log('[Analytics] Metrics fetched:', metrics.length, 'variations');
-  console.log('[Analytics] Sample metric:', metrics[0]);
+    // ✅ VERIFICAR SE CAMPANHA PERTENCE AO USUÁRIO
+    const campaign = await db.campaign.findFirst({
+      where: {
+        id: campaignId,
+        userId: userId
+      },
+      include: {
+        variations: true
+      }
+    });
 
-  // ✅ BUSCAR DADOS DO FUNIL (COM GMT-3)
-  const funnelDataRaw = await db.$queryRaw`
-    SELECT 
-      v.id as "variationId",
-      COUNT(DISTINCT c.id) as step_views,
-      0 as step_video_play,
-      0 as step_video_50,
-      0 as step_video_complete,
-      COUNT(DISTINCT co.id) as step_checkout,
-      0 as step_purchase
-    FROM "Variation" v
-    LEFT JOIN "Click" c ON v.id = c."variationId"
-      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
-      AND DATE(c."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
-    LEFT JOIN "Conversion" co ON v.id = co."variationId"
-      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
-      AND DATE(co."createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
-    WHERE v."campaignId" = ${campaignId}
-    GROUP BY v.id
-  `;
-  
-  // Converter BigInt para Number
-  const funnelData = convertBigIntToNumber(funnelDataRaw);
-
-  // ✅ BUSCAR TIMELINE USANDO CLICK E CONVERSION (COM GMT-3)
-  const timelineRaw = await db.$queryRaw`
-    SELECT 
-      date::date,
-      COALESCE(SUM(views), 0) as views,
-      COALESCE(SUM(conversions), 0) as conversions,
-      0 as purchases,
-      0 as revenue
-    FROM (
-      SELECT DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') as date, COUNT(*) as views, 0 as conversions
-      FROM "Click"
-      WHERE "campaignId" = ${campaignId}
-        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
-        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
-      GROUP BY DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo')
-      
-      UNION ALL
-      
-      SELECT DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') as date, 0 as views, COUNT(*) as conversions
-      FROM "Conversion"
-      WHERE "campaignId" = ${campaignId}
-        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') >= DATE(${startDate}::timestamp)
-        AND DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo') <= DATE(${endDate}::timestamp)
-      GROUP BY DATE("createdAt" AT TIME ZONE 'America/Sao_Paulo')
-    ) combined
-    GROUP BY date
-    ORDER BY date ASC
-  `;
-  
-  // Converter BigInt para Number
-  const timeline = convertBigIntToNumber(timelineRaw);
-
-  return NextResponse.json({
-    campaign,
-    metrics,
-    funnelData,
-    timeline,
-    dateRange: {
-      start: startDate,
-      end: endDate
+    if (!campaign) {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
-  });
+
+    // ✅ CONSTRUIR WHERE CLAUSE PARA FILTRO DE DATA
+    const dateFilter: any = {
+      campaignId: campaignId
+    };
+
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        gte: new Date(startDate + 'T00:00:00.000Z'),
+        lte: new Date(endDate + 'T23:59:59.999Z')
+      };
+    }
+
+    // ✅ BUSCAR CLICKS (VIEWS)
+    const clicks = await db.click.findMany({
+      where: dateFilter,
+      select: {
+        id: true,
+        variationId: true,
+        createdAt: true
+      }
+    });
+
+    // ✅ BUSCAR CHECKOUTS (CONVERSÃO SECUNDÁRIA)
+    const checkouts = await db.event.findMany({
+      where: {
+        ...dateFilter,
+        eventType: 'checkout'
+      },
+      select: {
+        id: true,
+        variationId: true,
+        createdAt: true
+      }
+    });
+
+    // ✅ BUSCAR PURCHASES (CONVERSÃO PRIMÁRIA) - CORRIGIDO!
+    const purchases = await db.event.findMany({
+      where: {
+        ...dateFilter,
+        eventType: 'purchase' // ✅ ISSO ESTAVA FALTANDO OU ERRADO!
+      },
+      select: {
+        id: true,
+        variationId: true,
+        eventValue: true,
+        createdAt: true
+      }
+    });
+
+    console.log('[Analytics] Campaign:', campaignId);
+    console.log('[Analytics] Clicks:', clicks.length);
+    console.log('[Analytics] Checkouts:', checkouts.length);
+    console.log('[Analytics] Purchases:', purchases.length);
+    console.log('[Analytics] Total Revenue:', purchases.reduce((sum, p) => sum + (p.eventValue || 0), 0));
+
+    // ✅ AGRUPAR POR VARIAÇÃO
+    const variationMetrics = campaign.variations.map(variation => {
+      const varClicks = clicks.filter(c => c.variationId === variation.id);
+      const varCheckouts = checkouts.filter(c => c.variationId === variation.id);
+      const varPurchases = purchases.filter(p => p.variationId === variation.id);
+      
+      const revenue = varPurchases.reduce((sum, p) => sum + (p.eventValue || 0), 0);
+      const views = varClicks.length;
+      const checkoutCount = varCheckouts.length;
+      const purchaseCount = varPurchases.length;
+
+      return {
+        variation_id: variation.id,
+        variation_name: variation.name,
+        views: views,
+        checkouts: checkoutCount,
+        purchases: purchaseCount, // ✅ AGORA VAI CONTAR!
+        revenue: revenue, // ✅ AGORA VAI SOMAR!
+        checkout_rate: views > 0 ? (checkoutCount / views * 100) : 0,
+        purchase_rate: views > 0 ? (purchaseCount / views * 100) : 0
+      };
+    });
+
+    // ✅ TIMELINE (DADOS POR DIA)
+    const timeline: any = {};
+    
+    // Processar clicks (views)
+    clicks.forEach(click => {
+      const date = click.createdAt.toISOString().split('T')[0];
+      if (!timeline[date]) {
+        timeline[date] = { date, views: 0, conversions: 0, purchases: 0 };
+      }
+      timeline[date].views++;
+    });
+
+    // Processar checkouts
+    checkouts.forEach(checkout => {
+      const date = checkout.createdAt.toISOString().split('T')[0];
+      if (!timeline[date]) {
+        timeline[date] = { date, views: 0, conversions: 0, purchases: 0 };
+      }
+      timeline[date].conversions++;
+    });
+
+    // Processar purchases
+    purchases.forEach(purchase => {
+      const date = purchase.createdAt.toISOString().split('T')[0];
+      if (!timeline[date]) {
+        timeline[date] = { date, views: 0, conversions: 0, purchases: 0 };
+      }
+      timeline[date].purchases++; // ✅ AGORA VAI CONTAR!
+    });
+
+    const timelineArray = Object.values(timeline).sort((a: any, b: any) => 
+      a.date.localeCompare(b.date)
+    );
+
+    return NextResponse.json({
+      campaign: {
+        id: campaign.id,
+        name: campaign.name,
+        slug: campaign.slug
+      },
+      metrics: variationMetrics,
+      timeline: timelineArray,
+      summary: {
+        total_clicks: clicks.length,
+        total_checkouts: checkouts.length,
+        total_purchases: purchases.length,
+        total_revenue: purchases.reduce((sum, p) => sum + (p.eventValue || 0), 0)
+      }
+    });
+
+  } catch (error) {
+    console.error('[Analytics API] Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch analytics' },
+      { status: 500 }
+    );
+  }
 }

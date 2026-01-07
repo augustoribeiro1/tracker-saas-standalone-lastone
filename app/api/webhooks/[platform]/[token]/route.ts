@@ -121,8 +121,54 @@ function findValueInObject(obj: any): number | null {
 }
 
 /**
- * ✅ EXTRAÇÃO DE NOME DO PRODUTO
+ * ✅ EXTRAÇÃO DE UTMs DO PAYLOAD
  */
+function extractUtms(obj: any): {
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
+} {
+  const utms = {
+    utmSource: null as string | null,
+    utmMedium: null as string | null,
+    utmCampaign: null as string | null,
+    utmContent: null as string | null,
+    utmTerm: null as string | null
+  };
+
+  function search(o: any, path: string = 'root'): void {
+    if (!o) return;
+
+    if (typeof o === 'object' && !Array.isArray(o)) {
+      // Verificar campos diretos
+      if (o.utm_source) utms.utmSource = String(o.utm_source);
+      if (o.utm_medium) utms.utmMedium = String(o.utm_medium);
+      if (o.utm_campaign) utms.utmCampaign = String(o.utm_campaign);
+      if (o.utm_content) utms.utmContent = String(o.utm_content);
+      if (o.utm_term) utms.utmTerm = String(o.utm_term);
+
+      // Buscar recursivamente
+      for (const key in o) {
+        if (o.hasOwnProperty(key)) {
+          search(o[key], `${path}.${key}`);
+        }
+      }
+    }
+
+    if (Array.isArray(o)) {
+      for (const item of o) {
+        search(item, path);
+      }
+    }
+  }
+
+  search(obj);
+  
+  console.log('[Webhook] UTMs extracted:', utms);
+  return utms;
+}
 function extractProductName(obj: any): string {
   const searchTerms = [
     'product_name',
@@ -219,11 +265,13 @@ export async function POST(
       
       const value = findValueInObject(body);
       const productName = extractProductName(body);
+      const utms = extractUtms(body);
 
       console.log('[Webhook] Extracted data:', {
         clickId: 'none',
         value,
-        productName
+        productName,
+        utms
       });
 
       const event = await db.event.create({
@@ -232,7 +280,12 @@ export async function POST(
           eventName: productName,
           eventValue: value || 0,
           clickId: 'untracked',
-          userId: user.id
+          userId: user.id,
+          utmSource: utms.utmSource,
+          utmMedium: utms.utmMedium,
+          utmCampaign: utms.utmCampaign,
+          utmContent: utms.utmContent,
+          utmTerm: utms.utmTerm
         }
       });
 
@@ -298,14 +351,16 @@ export async function POST(
       variationId: click.variationId
     });
 
-    // ✅ EXTRAIR VALOR E PRODUTO
+    // ✅ EXTRAIR VALOR, PRODUTO E UTMs
     const value = findValueInObject(body);
     const productName = extractProductName(body);
+    const utms = extractUtms(body);
 
     console.log('[Webhook] Extracted data:', {
       clickId,
       value,
-      productName
+      productName,
+      utms
     });
 
     // ✅ REGISTRAR CONVERSÃO
@@ -316,7 +371,12 @@ export async function POST(
         eventValue: value || 0,
         clickId: click.clickid, // ✅ Usar clickid (string) não id (number)
         campaignId: click.campaignId,
-        variationId: click.variationId
+        variationId: click.variationId,
+        utmSource: utms.utmSource,
+        utmMedium: utms.utmMedium,
+        utmCampaign: utms.utmCampaign,
+        utmContent: utms.utmContent,
+        utmTerm: utms.utmTerm
       }
     });
 
