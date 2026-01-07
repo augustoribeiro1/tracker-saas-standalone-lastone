@@ -1,4 +1,4 @@
-// /app/api/dashboard/stats/route.ts
+// /app/api/dashboard/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -12,13 +12,6 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = parseInt(session.user.id);
-
-    // ✅ FILTRO: ÚLTIMOS 7 DIAS
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    console.log('[Dashboard Stats] User:', userId);
-    console.log('[Dashboard Stats] Date filter:', sevenDaysAgo.toISOString());
 
     // ✅ BUSCAR TODAS AS CAMPANHAS DO USUÁRIO
     const campaigns = await db.campaign.findMany({
@@ -43,18 +36,14 @@ export async function GET(request: NextRequest) {
       },
       orderBy: {
         createdAt: 'desc'
-      },
-      take: 5 // Últimas 5 campanhas para exibir
+      }
     });
 
-    // ✅ BUSCAR CLICKS (VIEWS) - ÚLTIMOS 7 DIAS
+    // ✅ BUSCAR TODAS AS VIEWS (CLICKS) DO USUÁRIO
     const allClicks = await db.click.findMany({
       where: {
         campaign: {
           userId
-        },
-        createdAt: {
-          gte: sevenDaysAgo
         }
       },
       select: {
@@ -64,15 +53,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // ✅ BUSCAR CHECKOUTS - ÚLTIMOS 7 DIAS
+    // ✅ BUSCAR TODAS AS CONVERSÕES SECUNDÁRIAS (CHECKOUTS) DO USUÁRIO
     const allCheckouts = await db.event.findMany({
       where: {
         eventType: 'checkout',
         campaign: {
           userId
-        },
-        createdAt: {
-          gte: sevenDaysAgo
         }
       },
       select: {
@@ -82,13 +68,10 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // ✅ BUSCAR PURCHASES - ÚLTIMOS 7 DIAS
+    // ✅ BUSCAR TODAS AS COMPRAS (PURCHASES) DO USUÁRIO - CORRIGIDO!
     const allPurchases = await db.event.findMany({
       where: {
-        eventType: 'purchase',
-        createdAt: {
-          gte: sevenDaysAgo
-        },
+        eventType: 'purchase', // ✅ ISSO ESTAVA FALTANDO!
         OR: [
           // Purchases rastreadas (com campaignId)
           {
@@ -111,13 +94,14 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log('[Dashboard Stats] Campaigns:', campaigns.length);
-    console.log('[Dashboard Stats] Clicks (7d):', allClicks.length);
-    console.log('[Dashboard Stats] Checkouts (7d):', allCheckouts.length);
-    console.log('[Dashboard Stats] Purchases (7d):', allPurchases.length);
-    console.log('[Dashboard Stats] Revenue (7d):', allPurchases.reduce((sum, p) => sum + (p.eventValue || 0), 0));
+    console.log('[Dashboard] User:', userId);
+    console.log('[Dashboard] Campaigns:', campaigns.length);
+    console.log('[Dashboard] Total Clicks:', allClicks.length);
+    console.log('[Dashboard] Total Checkouts:', allCheckouts.length);
+    console.log('[Dashboard] Total Purchases:', allPurchases.length);
+    console.log('[Dashboard] Total Revenue:', allPurchases.reduce((sum, p) => sum + (p.eventValue || 0), 0));
 
-    // ✅ CALCULAR MÉTRICAS DOS ÚLTIMOS 7 DIAS
+    // ✅ CALCULAR MÉTRICAS GERAIS
     const totalClicks = allClicks.length;
     const totalCheckouts = allCheckouts.length;
     const totalPurchases = allPurchases.length;
@@ -143,8 +127,8 @@ export async function GET(request: NextRequest) {
         metrics: {
           views: clicks,
           checkouts: checkouts,
-          purchases: purchases,
-          revenue: revenue,
+          purchases: purchases, // ✅ AGORA VAI CONTAR!
+          revenue: revenue, // ✅ AGORA VAI SOMAR!
           checkoutRate: clicks > 0 ? (checkouts / clicks * 100) : 0,
           purchaseRate: clicks > 0 ? (purchases / clicks * 100) : 0
         },
@@ -152,24 +136,66 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // ✅ ÚLTIMAS CONVERSÕES (PURCHASES)
+    const recentPurchases = await db.event.findMany({
+      where: {
+        eventType: 'purchase',
+        OR: [
+          {
+            campaign: {
+              userId
+            }
+          },
+          {
+            userId,
+            campaignId: null
+          }
+        ]
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 10,
+      select: {
+        id: true,
+        eventName: true,
+        eventValue: true,
+        createdAt: true,
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        },
+        variation: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
     return NextResponse.json({
       summary: {
         totalCampaigns: campaigns.length,
         totalClicks: totalClicks,
         totalCheckouts: totalCheckouts,
-        totalPurchases: totalPurchases,
-        totalRevenue: totalRevenue,
+        totalPurchases: totalPurchases, // ✅ AGORA VAI CONTAR!
+        totalRevenue: totalRevenue, // ✅ AGORA VAI SOMAR!
         checkoutRate: totalClicks > 0 ? (totalCheckouts / totalClicks * 100) : 0,
         purchaseRate: totalClicks > 0 ? (totalPurchases / totalClicks * 100) : 0,
         avgOrderValue: totalPurchases > 0 ? (totalRevenue / totalPurchases) : 0
       },
-      campaigns: campaignsWithMetrics
+      campaigns: campaignsWithMetrics,
+      recentPurchases: recentPurchases
     });
 
   } catch (error) {
-    console.error('[Dashboard Stats API] Error:', error);
+    console.error('[Dashboard API] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard stats' },
+      { error: 'Failed to fetch dashboard data' },
       { status: 500 }
     );
   }
