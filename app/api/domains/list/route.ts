@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
     // ✅ BUSCAR DOMÍNIO PADRÃO DO SISTEMA
     const systemDomain = await db.customDomain.findFirst({
       where: {
-        domain: 'app.split2.com.br',
-        isSystemDefault: true
+        domain: 'app.split2.com.br'
       }
     });
 
@@ -27,7 +26,9 @@ export async function GET(request: NextRequest) {
     const userDomains = await db.customDomain.findMany({
       where: {
         userId: userId,
-        isSystemDefault: false // Excluir domínio do sistema
+        NOT: {
+          domain: 'app.split2.com.br' // Excluir domínio do sistema
+        }
       },
       orderBy: {
         createdAt: 'desc'
