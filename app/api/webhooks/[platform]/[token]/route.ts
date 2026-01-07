@@ -1,58 +1,47 @@
+// /app/api/webhooks/[platform]/[token]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-const CLICKID_PREFIX = 'split2_';  // ✅ PREFIXO ÚNICO E INCONFUNDÍVEL
+const CLICKID_PREFIX = 'split2_';
 
-// ✅ BUSCA UNIVERSAL: Procura clickId com prefixo split2_ em qualquer lugar do JSON
-function findClickIdInObject(obj: any): string | null {
-  if (!obj || typeof obj !== 'object') return null;
+/**
+ * ✅ BUSCA RECURSIVA MELHORADA (com debug)
+ */
+function findClickIdInObject(obj: any, path: string = 'root'): string | null {
+  if (!obj) return null;
 
-  // Buscar em todas as chaves e valores
-  for (const key in obj) {
-    const value = obj[key];
-    
-    // Se o valor é uma string e contém o prefixo
-    if (typeof value === 'string' && value.includes(CLICKID_PREFIX)) {
-      // Procurar pelo padrão split2_[20 chars]
-      const match = value.match(/split2_[A-Za-z0-9]{20}/);
-      if (match) {
-        return match[0]; // Retorna com prefixo
-      }
+  // Se for string, verificar se contém split2_
+  if (typeof obj === 'string') {
+    const regex = new RegExp(`${CLICKID_PREFIX}[A-Za-z0-9_-]{20}`, 'g');
+    const match = obj.match(regex);
+    if (match) {
+      console.log(`[Debug] Found split2_ at path: ${path}, value: ${obj}`);
+      return match[0];
     }
-    
-    // Se o valor é um objeto ou array, buscar recursivamente
-    if (value && typeof value === 'object') {
-      const found = findClickIdInObject(value);
-      if (found) return found;
-    }
+    return null;
   }
 
-  return null;
-}
+  // Se for array
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      const result = findClickIdInObject(obj[i], `${path}[${i}]`);
+      if (result) return result;
+    }
+    return null;
+  }
 
-// ✅ FUNÇÃO UNIVERSAL: Busca recursiva em qualquer estrutura JSON
-function findValueInObject(obj: any, searchTerms: string[]): any {
-  if (!obj || typeof obj !== 'object') return null;
-
-  // Buscar no nível atual
-  for (const searchTerm of searchTerms) {
+  // Se for objeto
+  if (typeof obj === 'object') {
     for (const key in obj) {
-      if (key.toLowerCase().includes(searchTerm.toLowerCase())) {
+      if (obj.hasOwnProperty(key)) {
+        // Log cada campo checado
         const value = obj[key];
-        if (value !== null && value !== undefined && value !== '') {
-          return value;
+        if (typeof value === 'string' && value.includes('split2_')) {
+          console.log(`[Debug] Checking ${path}.${key}: ${value}`);
         }
-      }
-    }
-  }
-
-  // Buscar recursivamente em objetos aninhados
-  for (const key in obj) {
-    const value = obj[key];
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const found = findValueInObject(value, searchTerms);
-      if (found !== null && found !== undefined && found !== '') {
-        return found;
+        
+        const result = findClickIdInObject(value, `${path}.${key}`);
+        if (result) return result;
       }
     }
   }
@@ -60,51 +49,118 @@ function findValueInObject(obj: any, searchTerms: string[]): any {
   return null;
 }
 
-// ✅ FUNÇÃO UNIVERSAL: Extrai valor monetário com detecção de centavos
-function extractMonetaryValue(obj: any): number {
-  // Ordem de prioridade para busca
-  const priceTerms = [
-    ['value', 'payment_value'],               // CartPanda, outros
-    ['charge_amount', 'charge'],              // Kiwify
-    ['price', 'product_price', 'total_price'], // Hotmart, outros
-    ['amount', 'total_amount'],               // Genéricos
-    ['total', 'order_value']                  // Alternativos
+/**
+ * ✅ BUSCA UNIVERSAL DE VALOR MONETÁRIO
+ */
+function findValueInObject(obj: any): number | null {
+  if (!obj) return null;
+
+  const searchTerms = [
+    'charge_amount',
+    'price',
+    'amount',
+    'total',
+    'value',
+    'total_price',
+    'subtotal',
+    'grand_total'
   ];
 
-  for (const terms of priceTerms) {
-    const value = findValueInObject(obj, terms);
-    if (value !== null) {
-      const numValue = parseFloat(value);
-      if (!isNaN(numValue)) {
-        // ✅ Detectar se está em centavos (valores >= 100 provavelmente são)
-        // CartPanda: 750 = R$ 7,50
-        // Kiwify: 6567 = R$ 65,67
-        // Outros: valores pequenos (< 100) provavelmente já estão em reais
-        if (numValue >= 100) {
-          return numValue / 100;
+  function search(o: any): any {
+    if (!o) return null;
+
+    if (typeof o === 'object' && !Array.isArray(o)) {
+      for (const term of searchTerms) {
+        if (o[term] !== undefined && o[term] !== null) {
+          return o[term];
         }
-        return numValue;
+      }
+
+      for (const key in o) {
+        if (o.hasOwnProperty(key)) {
+          const result = search(o[key]);
+          if (result !== null) return result;
+        }
       }
     }
+
+    if (Array.isArray(o)) {
+      for (const item of o) {
+        const result = search(item);
+        if (result !== null) return result;
+      }
+    }
+
+    return null;
   }
 
-  return 0;
+  const rawValue = search(obj);
+  if (rawValue === null || rawValue === undefined) return null;
+
+  let numValue: number;
+
+  if (typeof rawValue === 'string') {
+    const cleaned = rawValue.replace(/[^0-9.,]/g, '').replace(',', '.');
+    numValue = parseFloat(cleaned);
+  } else if (typeof rawValue === 'number') {
+    numValue = rawValue;
+  } else {
+    return null;
+  }
+
+  if (isNaN(numValue)) return null;
+
+  // Se > 1000, provavelmente está em centavos
+  if (numValue > 1000) {
+    numValue = numValue / 100;
+  }
+
+  return numValue;
 }
 
-// ✅ PARSE TRACKING CODE: Extrai testId, variationId e clickId
-function parseTrackingCode(trackingCode: string) {
-  // Formato esperado: testId-variationId-split2_clickId
-  const parts = trackingCode.split('-');
-  
-  if (parts.length >= 3) {
-    return {
-      testId: parseInt(parts[0]),
-      variationId: parseInt(parts[1]),
-      clickId: parts.slice(2).join('-')  // Pode ter mais de um hífen no clickId
-    };
+/**
+ * ✅ EXTRAÇÃO DE NOME DO PRODUTO
+ */
+function extractProductName(obj: any): string {
+  const searchTerms = [
+    'product_name',
+    'product',
+    'item_name',
+    'name',
+    'title',
+    'order_name',
+    'number'
+  ];
+
+  function search(o: any): string | null {
+    if (!o) return null;
+
+    if (typeof o === 'object' && !Array.isArray(o)) {
+      for (const term of searchTerms) {
+        if (o[term] && typeof o[term] === 'string') {
+          return o[term];
+        }
+      }
+
+      for (const key in o) {
+        if (o.hasOwnProperty(key)) {
+          const result = search(o[key]);
+          if (result) return result;
+        }
+      }
+    }
+
+    if (Array.isArray(o)) {
+      for (const item of o) {
+        const result = search(item);
+        if (result) return result;
+      }
+    }
+
+    return null;
   }
-  
-  return null;
+
+  return search(obj) || 'Unknown Product';
 }
 
 export async function POST(
@@ -115,169 +171,187 @@ export async function POST(
     const { platform, token } = params;
     const body = await request.json();
 
-    console.log('[Webhook] Received:', platform, body);
+    console.log('[Webhook] Received:', platform, JSON.stringify(body, null, 2));
 
-    // ✅ 1. BUSCAR USUÁRIO PELO TOKEN
+    // ✅ VALIDAR TOKEN
     const user = await db.user.findUnique({
-      where: { webhookToken: token },
-      select: { id: true, email: true }
+      where: { webhookToken: token }
     });
 
     if (!user) {
-      console.error('[Webhook] User not found for token:', token);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid webhook token but returning 200' 
-      }, { status: 200 });
+      console.log('[Webhook] Invalid token:', token);
+      return NextResponse.json({ error: 'Invalid webhook token' }, { status: 401 });
     }
 
     console.log('[Webhook] User found:', user.email);
 
-    // ✅ 2. BUSCAR WEBHOOK CONFIG (para stats)
-    const webhookConfig = await db.webhookConfiguration.findFirst({
-      where: {
-        userId: user.id,
-        platform: platform.toLowerCase()
-      }
-    });
-
-    // ✅ 3. BUSCA UNIVERSAL DE CLICKID (com prefixo split2_)
+    // ✅ BUSCAR CLICKID COM DEBUG
+    console.log('[Webhook] Searching for split2_ prefix...');
     const clickIdWithPrefix = findClickIdInObject(body);
     
-    let trackingData = null;
-    let clickId = null;
-    
-    if (clickIdWithPrefix) {
-      // Remove o prefixo antes de processar
-      const cleanClickId = clickIdWithPrefix.replace(CLICKID_PREFIX, '');
+    if (!clickIdWithPrefix) {
+      console.log('[Webhook] ❌ NO split2_ found in entire payload');
+      console.log('[Webhook] Payload keys:', Object.keys(body));
       
-      // Tentar fazer parse do tracking code completo
-      // Primeiro procura utm_term que pode ter formato: testId-varId-split2_clickId
-      const utmTerm = findValueInObject(body, ['utm_term', 'utmterm', 'tracking_code']);
-      
-      if (utmTerm && utmTerm.includes('-')) {
-        trackingData = parseTrackingCode(utmTerm);
-        if (trackingData) {
-          // Remove prefixo do clickId parseado também
-          trackingData.clickId = trackingData.clickId.replace(CLICKID_PREFIX, '');
+      // Debug: mostrar campos que contêm "utm"
+      const utmFields: any = {};
+      function findUtm(obj: any, path: string = 'root') {
+        if (!obj) return;
+        if (typeof obj === 'string' && path.includes('utm')) {
+          utmFields[path] = obj;
+        }
+        if (typeof obj === 'object') {
+          for (const key in obj) {
+            if (key.toLowerCase().includes('utm')) {
+              utmFields[`${path}.${key}`] = obj[key];
+            }
+            findUtm(obj[key], `${path}.${key}`);
+          }
         }
       }
+      findUtm(body);
+      console.log('[Webhook] UTM fields found:', utmFields);
       
-      // Se não conseguiu parsear, usar só o clickId
-      if (!trackingData) {
-        clickId = cleanClickId;
-        console.log('[Webhook] Found clickId via split2_ prefix:', clickId);
-      } else {
-        clickId = trackingData.clickId;
-        console.log('[Webhook] Parsed full tracking code:', trackingData);
-      }
-    }
-
-    // Extrair UTMs
-    const utmSource = findValueInObject(body, ['utm_source', 'utmsource']);
-    const utmCampaign = findValueInObject(body, ['utm_campaign', 'utmcampaign']);
-    const utmMedium = findValueInObject(body, ['utm_medium', 'utmmedium']);
-    const utmContent = findValueInObject(body, ['utm_content', 'utmcontent']);
-
-    // ✅ 4. EXTRAÇÃO UNIVERSAL DE VALOR
-    const eventValue = extractMonetaryValue(body);
-    
-    // ✅ 5. EXTRAÇÃO UNIVERSAL DE NOME DO PRODUTO
-    const productName = findValueInObject(body, [
-      'product_name', 
-      'productname', 
-      'product', 
-      'item_name',
-      'name'
-    ]) || 'Purchase';
-
-    if (!clickId) {
+      // Registrar como conversão não rastreada
       console.warn('[Webhook] No clickId found (no split2_ prefix), registering as untracked conversion');
-    }
+      
+      const value = findValueInObject(body);
+      const productName = extractProductName(body);
 
-    console.log('[Webhook] Extracted data:', {
-      clickId: clickId || 'none',
-      value: eventValue,
-      productName
-    });
+      console.log('[Webhook] Extracted data:', {
+        clickId: 'none',
+        value,
+        productName
+      });
 
-    // ✅ 6. REGISTRAR CONVERSÃO
-    try {
-      await db.event.create({
+      const event = await db.event.create({
         data: {
-          userId: user.id,
-          clickId: clickId || null,
-          campaignId: trackingData?.testId || null,
-          variationId: trackingData?.variationId || null,
           eventType: 'purchase',
           eventName: productName,
-          eventValue: eventValue,
-          utmTerm: findValueInObject(body, ['utm_term', 'utmterm']) || null,
-          utmSource: utmSource,
-          utmCampaign: utmCampaign,
-          utmMedium: utmMedium,
-          utmContent: utmContent,
+          eventValue: value || 0,
+          clickId: 'untracked',
+          userId: user.id
         }
       });
 
       console.log('[Webhook] Conversion registered:', {
         userId: user.id,
-        clickId: clickId || 'untracked',
-        value: eventValue,
+        clickId: 'untracked',
+        value: value || 0,
         product: productName,
-        tracked: !!trackingData
+        tracked: false
       });
-    } catch (dbError) {
-      console.error('[Webhook] Database error:', dbError);
+
+      return NextResponse.json({
+        success: true,
+        tracked: false,
+        eventId: event.id
+      });
     }
 
-    // 7. Atualizar webhook stats
-    if (webhookConfig) {
-      try {
-        await db.webhookConfiguration.update({
-          where: { id: webhookConfig.id },
-          data: {
-            totalReceived: { increment: 1 },
-            lastReceivedAt: new Date()
-          }
-        });
-      } catch (updateError) {
-        console.error('[Webhook] Failed to update stats:', updateError);
-      }
+    // ✅ CLICKID ENCONTRADO!
+    console.log('[Webhook] ✅ Found clickId with prefix:', clickIdWithPrefix);
 
-      // 8. Log do webhook
-      try {
-        await db.webhookLog.create({
-          data: {
-            webhookId: webhookConfig.id,
-            payload: JSON.stringify(body),
-            statusCode: 200
-          }
-        });
-      } catch (logError) {
-        console.error('[Webhook] Failed to create log:', logError);
+    // Remover prefixo split2_
+    const clickId = clickIdWithPrefix.replace(CLICKID_PREFIX, '');
+    console.log('[Webhook] Clean clickId:', clickId);
+
+    // ✅ BUSCAR CLICK NO BANCO
+    const click = await db.click.findUnique({
+      where: { clickid: clickId },
+      include: {
+        campaign: true,
+        variation: true
       }
+    });
+
+    if (!click) {
+      console.warn('[Webhook] Click not found in database:', clickId);
+      
+      // Registrar como não rastreado mesmo com split2_
+      const value = findValueInObject(body);
+      const productName = extractProductName(body);
+
+      const event = await db.event.create({
+        data: {
+          eventType: 'purchase',
+          eventName: productName,
+          eventValue: value || 0,
+          clickId: clickId, // Guarda o clickId mesmo não encontrando
+          userId: user.id
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        tracked: false,
+        reason: 'click_not_found',
+        eventId: event.id
+      });
     }
 
-    // ✅ SEMPRE RETORNAR 200 OK
-    return NextResponse.json({ 
+    console.log('[Webhook] Click found:', {
+      clickId: click.clickid,
+      campaignId: click.campaignId,
+      variationId: click.variationId
+    });
+
+    // ✅ EXTRAIR VALOR E PRODUTO
+    const value = findValueInObject(body);
+    const productName = extractProductName(body);
+
+    console.log('[Webhook] Extracted data:', {
+      clickId,
+      value,
+      productName
+    });
+
+    // ✅ REGISTRAR CONVERSÃO
+    const event = await db.event.create({
+      data: {
+        eventType: 'purchase',
+        eventName: productName,
+        eventValue: value || 0,
+        clickId: click.id,
+        campaignId: click.campaignId,
+        variationId: click.variationId
+      }
+    });
+
+    console.log('[Webhook] ✅ Conversion tracked:', {
+      eventId: event.id,
+      clickId: click.clickid,
+      campaignId: click.campaignId,
+      variationId: click.variationId,
+      value: value || 0,
+      product: productName
+    });
+
+    return NextResponse.json({
       success: true,
-      tracked: !!trackingData,
-      clickId: clickId || null,
-      userId: user.id,
-      message: clickId ? 'Conversion tracked with clickId' : 'Conversion registered as untracked'
-    }, { status: 200 });
+      tracked: true,
+      eventId: event.id,
+      campaignId: click.campaignId,
+      variationId: click.variationId
+    });
 
-  } catch (error: any) {
-    console.error('[Webhook] Processing error:', error);
-    
+  } catch (error) {
+    console.error('[Webhook] Error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal error but returning 200 to prevent webhook deactivation',
-        message: error.message 
-      },
+      { success: true }, // ✅ Sempre retorna 200 OK
       { status: 200 }
     );
   }
+}
+
+// ✅ Aceita GET também (algumas plataformas fazem verificação)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { platform: string; token: string } }
+) {
+  return NextResponse.json({
+    status: 'ok',
+    platform: params.platform,
+    message: 'Webhook endpoint is ready'
+  });
 }
