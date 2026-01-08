@@ -51,7 +51,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
     });
 
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || `"Split2" <${process.env.SMTP_USER}>`,
+      from: process.env.SMTP_USER, // IMPORTANTE: Usar exatamente o mesmo email autenticado
       to: email,
       subject: 'Reset de Senha - Split2',
       html: `
@@ -128,6 +128,8 @@ Se você não solicitou este reset, ignore este email.
       errorMessage = 'Erro de conexão com servidor SMTP. Verifique host e porta.';
     } else if (error.message?.includes('socket close')) {
       errorMessage = 'Conexão SMTP fechada inesperadamente. Verifique configurações SSL/TLS.';
+    } else if (error.responseCode === 553 || error.message?.includes('not allowed to relay')) {
+      errorMessage = 'Remetente não autorizado. Use o mesmo email autenticado no SMTP_FROM.';
     }
 
     throw new Error(errorMessage);
