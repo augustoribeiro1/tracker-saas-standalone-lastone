@@ -214,7 +214,7 @@ export default function DomainsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className="text-black dark:text-gray-900 font-medium">
+                    <span style={{ color: '#000000' }} className="font-medium">
                       {domain.dnsConfigured ? '✅ Configurado' : '⏳ Pendente'}
                     </span>
                   </td>
