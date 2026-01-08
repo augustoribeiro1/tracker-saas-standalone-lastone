@@ -236,50 +236,169 @@ export default function CampaignAnalyticsPage() {
         </div>
       </div>
 
-      {/* Funil de Conversão */}
+      {/* Compras Registradas */}
+      <PurchasesTable campaignId={params.id as string} />
+    </div>
+  );
+}
+
+// Componente para exibir compras registradas
+function PurchasesTable({ campaignId }: { campaignId: string }) {
+  const [conversions, setConversions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ totalPages: 1, total: 0 });
+
+  useEffect(() => {
+    fetchConversions();
+  }, [page]);
+
+  const fetchConversions = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/webhooks/conversions?campaignId=${campaignId}&page=${page}&per_page=50`);
+      const data = await res.json();
+      setConversions(data.conversions || []);
+      setPagination(data.pagination || { totalPages: 1, total: 0 });
+    } catch (error) {
+      console.error('Error fetching conversions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert('Copiado para a área de transferência!');
+  };
+
+  if (loading) {
+    return (
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Funil de Conversão</h2>
-        <div className="space-y-6">
-          {data.metrics.map((metric: any) => {
-            const views = parseInt(metric.views || 0);
-            const checkouts = parseInt(metric.checkouts || 0);
-            const purchases = parseInt(metric.purchases || 0);
-            
-            const checkoutPercent = views > 0 ? (checkouts / views * 100) : 0;
-            const purchasePercent = views > 0 ? (purchases / views * 100) : 0;
-            
-            return (
-              <div key={metric.variation_id}>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">{metric.variation_name}</h3>
-                <div className="space-y-2">
-                  {/* Views */}
-                  <div className="relative">
-                    <div className="h-10 bg-blue-500 rounded flex items-center px-3" style={{ width: '100%' }}>
-                      <span className="text-sm font-medium text-white">Views: {views}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Conv. Secundária */}
-                  <div className="relative">
-                    <div className="h-10 bg-green-500 rounded flex items-center px-3" style={{ width: `${Math.max(checkoutPercent, 15)}%` }}>
-                      <span className="text-sm font-medium text-white">Conv. Sec.: {checkouts}</span>
-                    </div>
-                    <span className="text-xs text-gray-500 ml-2">{checkoutPercent.toFixed(1)}%</span>
-                  </div>
-                  
-                  {/* Compras */}
-                  <div className="relative">
-                    <div className="h-10 bg-orange-500 rounded flex items-center px-3" style={{ width: `${Math.max(purchasePercent, 15)}%` }}>
-                      <span className="text-sm font-medium text-white">Compras: {purchases}</span>
-                    </div>
-                    <span className="text-xs text-gray-500 ml-2">{purchasePercent.toFixed(1)}%</span>
-                  </div>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Compras Registradas</h2>
+        <div className="text-center py-8">Carregando compras...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white shadow rounded-lg p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-medium text-gray-900">Compras Registradas</h2>
+        <span className="text-sm text-gray-600">Total: {pagination.total}</span>
+      </div>
+
+      {conversions.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">Nenhuma compra registrada para esta campanha ainda.</p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Click ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campanha</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Source</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Campaign</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Term</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {conversions.map((conversion: any) => (
+                  <tr key={conversion.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(conversion.createdAt).toLocaleString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                          {conversion.clickId || 'N/A'}
+                        </code>
+                        {conversion.clickId && (
+                          <button
+                            onClick={() => copyToClipboard(conversion.clickId)}
+                            className="text-gray-400 hover:text-gray-600"
+                            title="Copiar Click ID"
+                          >
+                            📋
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {conversion.campaign?.name || 'Não rastreado'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {formatCurrency(parseFloat(conversion.eventValue || 0))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {conversion.utmSource || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {conversion.utmCampaign || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {conversion.utmTerm || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Paginação */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Próxima
+                </button>
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Página <span className="font-medium">{page}</span> de{' '}
+                    <span className="font-medium">{pagination.totalPages}</span>
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
+                    <button
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                      disabled={page === 1}
+                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                      disabled={page === pagination.totalPages}
+                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      →
+                    </button>
+                  </nav>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

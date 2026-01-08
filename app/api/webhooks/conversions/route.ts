@@ -12,23 +12,35 @@ export async function GET(request: NextRequest) {
 
     const userId = parseInt(session.user.id);
     const { searchParams } = request.nextUrl;
-    
+
     const page = parseInt(searchParams.get('page') || '1');
     const perPage = parseInt(searchParams.get('per_page') || '50');
     const skip = (page - 1) * perPage;
+    const campaignId = searchParams.get('campaignId');
 
     // ✅ BUSCAR CONVERSÕES DO USUÁRIO
     // Inclui:
     // 1. Conversões rastreadas (com campaignId de campanhas do usuário)
     // 2. Conversões não rastreadas (userId direto no Event)
+    // 3. Se campaignId for fornecido, filtra apenas por essa campanha
+    const whereCondition: any = {
+      eventType: 'purchase',
+    };
+
+    if (campaignId) {
+      // Filtrar por campanha específica
+      whereCondition.campaignId = parseInt(campaignId);
+      whereCondition.campaign = { userId };
+    } else {
+      // Mostrar todas as conversões do usuário
+      whereCondition.OR = [
+        { campaign: { userId } },  // Conversões rastreadas (vinculadas a campanhas)
+        { userId }                 // Conversões não rastreadas (vinculadas diretamente)
+      ];
+    }
+
     const conversions = await db.event.findMany({
-      where: {
-        eventType: 'purchase',
-        OR: [
-          { campaign: { userId } },  // Conversões rastreadas (vinculadas a campanhas)
-          { userId }                 // Conversões não rastreadas (vinculadas diretamente)
-        ]
-      },
+      where: whereCondition,
       orderBy: {
         createdAt: 'desc'
       },
@@ -57,13 +69,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ CONTAR TOTAL DE CONVERSÕES DO USUÁRIO
     const totalCount = await db.event.count({
-      where: {
-        eventType: 'purchase',
-        OR: [
-          { campaign: { userId } },
-          { userId }
-        ]
-      }
+      where: whereCondition
     });
 
     return NextResponse.json({
