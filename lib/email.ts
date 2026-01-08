@@ -50,8 +50,13 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
       logger: process.env.NODE_ENV === 'development',
     });
 
+    // Formato: "Nome <email>" onde email DEVE ser o mesmo do SMTP_USER
+    const fromAddress = process.env.SMTP_FROM
+      ? process.env.SMTP_FROM
+      : `"Split2" <${process.env.SMTP_USER}>`;
+
     await transporter.sendMail({
-      from: process.env.SMTP_USER, // IMPORTANTE: Usar exatamente o mesmo email autenticado
+      from: fromAddress,
       to: email,
       subject: 'Reset de Senha - Split2',
       html: `
