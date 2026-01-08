@@ -213,8 +213,8 @@ export default function DomainsPage() {
                       {getStatusText(domain.status)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span style={{ color: '#000000' }} className="font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span style={{ color: '#000000 !important' }} className="text-sm font-medium">
                       {domain.dnsConfigured ? '✅ Configurado' : '⏳ Pendente'}
                     </span>
                   </td>
