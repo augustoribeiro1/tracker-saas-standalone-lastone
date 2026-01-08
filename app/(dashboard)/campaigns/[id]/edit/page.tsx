@@ -284,7 +284,6 @@ export default function EditCampaignPage() {
             onChange={e => setFormData({...formData, customDomainId: e.target.value})}
             className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
           >
-            <option value="">Selecione um domínio</option>
             {domains.map(domain => (
               <option key={domain.id} value={domain.id}>
                 {domain.domain} {domain.isDefault ? '(Padrão)' : '✅'}
@@ -292,7 +291,7 @@ export default function EditCampaignPage() {
             ))}
           </select>
           <p className="mt-2 text-xs text-gray-500">
-            {selectedDomain?.domain === 'app.split2.com.br' 
+            {selectedDomain?.domain === 'app.split2.com.br'
               ? '💡 Domínio padrão do sistema - disponível para todos'
               : 'Domínio personalizado'
             }

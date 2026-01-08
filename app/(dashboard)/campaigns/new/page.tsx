@@ -255,14 +255,13 @@ export default function NewCampaignPage() {
 
         {/* Seletor de Domínio */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Domínio</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Domínio de Tracking</label>
           <select
             required
             value={formData.customDomainId}
             onChange={e => setFormData({...formData, customDomainId: e.target.value})}
             className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 px-3 py-2 bg-white text-gray-900"
           >
-            <option value="">Selecione um domínio</option>
             {domains.map(domain => (
               <option key={domain.id} value={domain.id}>
                 {domain.domain} {domain.isDefault ? '(Padrão)' : ''}
@@ -270,7 +269,7 @@ export default function NewCampaignPage() {
             ))}
           </select>
           <p className="mt-2 text-xs text-gray-500">
-            {isDefaultDomain 
+            {isDefaultDomain
               ? '💡 Seu ID será adicionado automaticamente como prefixo do slug para evitar conflitos'
               : 'Use um slug único para seu domínio'
             }
