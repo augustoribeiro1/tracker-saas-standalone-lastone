@@ -16,6 +16,7 @@ function DashboardNav() {
     { name: 'Checkout', href: '/webhooks' },
     { name: 'Domínios', href: '/domains' },
     { name: 'Planos', href: '/pricing' },
+    { name: 'Minha Conta', href: '/account' },
   ];
 
   return (
