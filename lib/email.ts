@@ -25,6 +25,8 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
     const useSSL = process.env.SMTP_PROTOCOL === 'SSL';
     const smtpPort = parseInt(process.env.SMTP_PORT || (useSSL ? '465' : '587'));
 
+    console.log(`📧 Configurando SMTP: ${process.env.SMTP_HOST}:${smtpPort} (SSL: ${useSSL})`);
+
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: smtpPort,
@@ -33,6 +35,19 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Configurações adicionais para melhor compatibilidade
+      tls: {
+        // Não rejeitar certificados não autorizados (útil para alguns provedores)
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
+      },
+      // Timeouts maiores para conexões lentas
+      connectionTimeout: 10000, // 10 segundos
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+      // Debug (remover em produção após funcionar)
+      debug: process.env.NODE_ENV === 'development',
+      logger: process.env.NODE_ENV === 'development',
     });
 
     await transporter.sendMail({
@@ -95,8 +110,26 @@ Se você não solicitou este reset, ignore este email.
     console.log(`✅ Email de reset enviado para: ${email}`);
     return { success: true, resetUrl };
 
-  } catch (error) {
-    console.error('❌ Erro ao enviar email:', error);
-    throw new Error('Erro ao enviar email de reset');
+  } catch (error: any) {
+    console.error('❌ Erro ao enviar email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+    });
+
+    // Mensagens de erro mais específicas
+    let errorMessage = 'Erro ao enviar email de reset';
+
+    if (error.code === 'EAUTH') {
+      errorMessage = 'Erro de autenticação SMTP. Verifique usuário e senha.';
+    } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
+      errorMessage = 'Erro de conexão com servidor SMTP. Verifique host e porta.';
+    } else if (error.message?.includes('socket close')) {
+      errorMessage = 'Conexão SMTP fechada inesperadamente. Verifique configurações SSL/TLS.';
+    }
+
+    throw new Error(errorMessage);
   }
 }
