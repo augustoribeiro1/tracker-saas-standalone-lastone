@@ -143,7 +143,7 @@ export default function WebhooksPage() {
       </div>
 
       {/* ✅ BOTÃO ADICIONAR NOVO OU LIMITE ATINGIDO */}
-      {(() => {
+      {!loading && (() => {
         const userPlan = session?.user?.plan || 'free';
         const planId = planNameToId(userPlan);
         const limits = getPlanLimits(planId);
@@ -196,7 +196,6 @@ export default function WebhooksPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plataforma</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recebidos</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
               </tr>
             </thead>
@@ -214,9 +213,18 @@ export default function WebhooksPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900">
-                        .../{webhook.platform}/{webhook.webhookUrl.split('/').pop()?.substring(0, 12)}...
-                      </code>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900">
+                          .../{webhook.platform}/{webhook.webhookUrl.split('/').pop()?.substring(0, 12)}...
+                        </code>
+                        <button
+                          onClick={() => copyToClipboard(webhook.webhookUrl)}
+                          className="text-blue-600 hover:text-blue-900 text-sm"
+                          title="Copiar URL completa"
+                        >
+                          📋
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
@@ -224,9 +232,6 @@ export default function WebhooksPage() {
                       }`}>
                         {getStatusText(webhook.status)}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {webhook.totalReceived}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       <button
