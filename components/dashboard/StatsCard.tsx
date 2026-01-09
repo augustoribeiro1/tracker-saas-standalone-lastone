@@ -1,3 +1,6 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { TrendingUp, TrendingDown } from "lucide-react";
+
 interface StatsCardProps {
   title: string;
   value: string | number;
@@ -11,42 +14,43 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, subtitle, icon, trend }: StatsCardProps) {
   return (
-    <div className="bg-white overflow-hidden shadow rounded-lg">
-      <div className="p-5">
-        <div className="flex items-center">
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between space-x-4">
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">
+              {title}
+            </p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl font-bold">
+                {value}
+              </p>
+              {trend && (
+                <div className={`flex items-center text-xs font-medium ${
+                  trend.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                }`}>
+                  {trend.isPositive ? (
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1" />
+                  )}
+                  {Math.abs(trend.value)}%
+                </div>
+              )}
+            </div>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground">
+                {subtitle}
+              </p>
+            )}
+          </div>
           {icon && (
-            <div className="flex-shrink-0">
-              <div className="rounded-md bg-blue-500 p-3">
-                {icon}
-              </div>
+            <div className="rounded-full bg-primary/10 p-3">
+              {icon}
             </div>
           )}
-          <div className={icon ? 'ml-5 w-0 flex-1' : 'w-full'}>
-            <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">
-                {title}
-              </dt>
-              <dd className="flex items-baseline">
-                <div className="text-2xl font-semibold text-gray-900">
-                  {value}
-                </div>
-                {trend && (
-                  <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                    trend.isPositive ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
-                  </div>
-                )}
-              </dd>
-              {subtitle && (
-                <dd className="mt-1 text-sm text-gray-600">
-                  {subtitle}
-                </dd>
-              )}
-            </dl>
-          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
