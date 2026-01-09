@@ -30,7 +30,7 @@ export function Sidebar() {
   return (
     <div className="flex h-full w-64 flex-col border-r bg-card">
       {/* Logo */}
-      <div className="flex h-16 items-center border-b px-6">
+      <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/logo.png"
@@ -44,7 +44,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-0.5 px-3 py-3">
         {navigation.map((item) => {
           const isActive = pathname === item.href
           return (
@@ -52,7 +52,7 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -66,7 +66,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t p-4">
+      <div className="border-t px-3 py-3">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Tema</span>
           <ThemeToggle />

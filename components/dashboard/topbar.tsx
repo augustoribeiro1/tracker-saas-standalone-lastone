@@ -24,7 +24,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     : "U"
 
   return (
-    <div className="flex h-16 items-center justify-between border-b bg-card px-6">
+    <div className="flex h-14 items-center justify-between border-b bg-card px-4 sm:px-6">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
