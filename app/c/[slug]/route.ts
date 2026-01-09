@@ -98,8 +98,23 @@ export async function GET(
       checkoutUrl = 'https://' + checkoutUrl;
     }
 
+    // ✅ Repassar todos os parâmetros UTM e query parameters da URL original
+    const checkoutUrlObj = new URL(checkoutUrl);
+    const originalParams = request.nextUrl.searchParams;
+
+    // Adicionar todos os parâmetros da URL original à URL de destino
+    originalParams.forEach((value, key) => {
+      // Preservar parâmetros existentes na URL de destino, mas adicionar novos
+      if (!checkoutUrlObj.searchParams.has(key)) {
+        checkoutUrlObj.searchParams.set(key, value);
+      }
+    });
+
+    const finalCheckoutUrl = checkoutUrlObj.toString();
+
     console.log('[/c] Selected variation:', variation.id, 'Traffic:', variation.trafficPercentage + '%');
-    console.log('[/c] Redirecting to checkout:', checkoutUrl);
+    console.log('[/c] Original URL params:', Object.fromEntries(originalParams.entries()));
+    console.log('[/c] Redirecting to checkout:', finalCheckoutUrl);
 
     // ✅ REGISTRAR ANALYTICS (Conversion)
     try {
@@ -116,8 +131,8 @@ export async function GET(
       // Não falhar o redirect
     }
 
-    // Redirect para checkout
-    return NextResponse.redirect(checkoutUrl, {
+    // Redirect para checkout com todos os parâmetros
+    return NextResponse.redirect(finalCheckoutUrl, {
       status: 302,
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
