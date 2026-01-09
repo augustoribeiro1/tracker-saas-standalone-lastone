@@ -313,38 +313,42 @@ export default function WebhooksPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {conversions.map((conversion) => (
-                    <tr
-                      key={conversion.id}
-                      className={`${
-                        conversion.clickId
-                          ? 'bg-green-50 hover:bg-green-100'
-                          : 'bg-red-50 hover:bg-red-100'
-                      }`}
-                    >
-                      <td className="px-4 py-3 text-sm">
-                        {conversion.campaign ? (
-                          <a
-                            href={`/campaigns/${conversion.campaign.id}`}
-                            className="text-blue-600 hover:text-blue-900 font-medium"
-                          >
-                            {conversion.campaign.name}
-                          </a>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {conversion.clickId ? (
-                          <code className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-mono">
-                            {conversion.clickId.substring(0, 12)}...
-                          </code>
-                        ) : (
-                          <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded font-semibold">
-                            Não rastreado
-                          </span>
-                        )}
-                      </td>
+                  {conversions.map((conversion) => {
+                    // Verificar se é realmente rastreado (clickId existe e não é "untracked")
+                    const isTracked = conversion.clickId && !conversion.clickId.toLowerCase().includes('untracked');
+
+                    return (
+                      <tr
+                        key={conversion.id}
+                        className={`${
+                          isTracked
+                            ? 'bg-green-50 hover:bg-green-100'
+                            : 'bg-red-50 hover:bg-red-100'
+                        }`}
+                      >
+                        <td className="px-4 py-3 text-sm">
+                          {conversion.campaign ? (
+                            <a
+                              href={`/campaigns/${conversion.campaign.id}`}
+                              className="text-blue-600 hover:text-blue-900 font-medium"
+                            >
+                              {conversion.campaign.name}
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isTracked ? (
+                            <code className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-mono">
+                              {conversion.clickId.substring(0, 12)}...
+                            </code>
+                          ) : (
+                            <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded font-semibold">
+                              Não rastreado
+                            </span>
+                          )}
+                        </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {conversion.utmSource || '-'}
                       </td>
@@ -364,7 +368,8 @@ export default function WebhooksPage() {
                         {formatDate(conversion.createdAt)}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
