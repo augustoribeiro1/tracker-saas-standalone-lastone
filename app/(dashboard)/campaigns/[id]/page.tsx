@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { formatCurrency } from '@/lib/utils';
+import { Edit, Calendar } from 'lucide-react';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
 
@@ -37,11 +43,19 @@ export default function CampaignAnalyticsPage() {
   };
 
   if (loading) {
-    return <div className="p-6">Carregando analytics...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-muted-foreground">Carregando analytics...</div>
+      </div>
+    );
   }
 
   if (!data) {
-    return <div className="p-6">Erro ao carregar dados</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-destructive">Erro ao carregar dados</div>
+      </div>
+    );
   }
 
   const totalMetrics = data.metrics.reduce((acc: any, m: any) => ({
@@ -56,39 +70,39 @@ export default function CampaignAnalyticsPage() {
   const avgOrderValue = totalMetrics.revenue / totalMetrics.purchases || 0;
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="sm:flex sm:items-center sm:justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{data.campaign.name}</h1>
-          <p className="mt-1 text-sm text-gray-500">Analytics e Performance</p>
+          <h1 className="text-3xl font-bold tracking-tight">{data.campaign.name}</h1>
+          <p className="mt-1 text-muted-foreground">Analytics e Performance</p>
         </div>
-        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
-          {/* Botão Editar */}
-          <a
-            href={`/campaigns/${params.id}/edit`}
-            className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            ✏️ Editar Campanha
-          </a>
-          {/* Datas com labels */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link href={`/campaigns/${params.id}/edit`}>
+            <Button variant="outline" className="gap-2">
+              <Edit className="h-4 w-4" />
+              Editar Campanha
+            </Button>
+          </Link>
           <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex flex-col">
-              <label className="text-xs text-gray-600 mb-1">Data Inicial</label>
-              <input
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="start-date" className="text-xs">Data Inicial</Label>
+              <Input
+                id="start-date"
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="rounded-md border-2 border-gray-300 shadow-sm text-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                className="text-sm"
               />
             </div>
-            <div className="flex flex-col">
-              <label className="text-xs text-gray-600 mb-1">Data Final</label>
-              <input
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="end-date" className="text-xs">Data Final</Label>
+              <Input
+                id="end-date"
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="rounded-md border-2 border-gray-300 shadow-sm text-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                className="text-sm"
               />
             </div>
           </div>

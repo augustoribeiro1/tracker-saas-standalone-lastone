@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
+import { AlertCircle, ExternalLink } from 'lucide-react';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -40,7 +43,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-gray-500">Carregando dashboard...</div>
+        <div className="text-lg text-muted-foreground">Carregando dashboard...</div>
       </div>
     );
   }
@@ -57,17 +60,17 @@ export default function DashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 lg:px-8">
-      <div className="sm:flex sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-3xl font-bold tracking-tight">
             Olá, {session?.user?.name || session?.user?.email}!
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-muted-foreground">
             Aqui está um resumo do seu dashboard
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 flex gap-3">
+        <div className="flex gap-3">
           <Link href="/campaigns/new">
             <Button>Nova Campanha</Button>
           </Link>
@@ -75,9 +78,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+        <Badge variant="secondary" className="text-sm">
           Plano {currentPlan.toUpperCase()}
-        </span>
+        </Badge>
         {currentPlan === 'free' && (
           <Link href="/pricing">
             <Button variant="outline" size="sm">Fazer Upgrade</Button>
@@ -113,14 +116,15 @@ export default function DashboardPage() {
       </div>
 
       {(campaignsUsage > 80 || clicksUsage > 80) && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
-                Atenção aos limites do plano
-              </h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                <ul className="list-disc list-inside space-y-1">
+        <Card className="border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <CardContent className="pt-6">
+            <div className="flex gap-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0" />
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  Atenção aos limites do plano
+                </h3>
+                <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
                   {campaignsUsage > 80 && (
                     <li>Campanhas: {usage.campaigns}/{planLimits.maxCampaigns} ({campaignsUsage.toFixed(0)}%)</li>
                   )}
@@ -130,86 +134,104 @@ export default function DashboardPage() {
                 </ul>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {stats?.timeline && stats.timeline.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Performance - Últimos 7 Dias</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={stats.timeline}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="views" stroke="#3B82F6" name="Views" />
-              <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conversão Secundária" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance - Últimos 7 Dias</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={stats.timeline}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="date" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px'
+                  }}
+                />
+                <Line type="monotone" dataKey="views" stroke="hsl(var(--primary))" name="Views" strokeWidth={2} />
+                <Line type="monotone" dataKey="conversions" stroke="#10B981" name="Conversão Secundária" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-gray-900">Últimas Campanhas</h2>
-          <Link href="/campaigns" className="text-sm text-blue-600 hover:text-blue-900">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Últimas Campanhas</CardTitle>
+          <Link href="/campaigns" className="text-sm text-primary hover:underline flex items-center gap-1">
             Ver todas
+            <ExternalLink className="h-3 w-3" />
           </Link>
-        </div>
+        </CardHeader>
+        <CardContent>
+          {campaigns.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">Você ainda não criou nenhuma campanha</p>
+              <Link href="/campaigns/new">
+                <Button>Criar Primeira Campanha</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Campanha
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      URL
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {campaigns.slice(0, 5).map((campaign: any) => {
+                    const fullUrl = campaign.customDomain
+                      ? `https://${campaign.customDomain.domain}/r/${campaign.slug}`
+                      : `/r/${campaign.slug}`;
 
-        {campaigns.length === 0 ? (
-          <div className="p-6 text-center">
-            <p className="text-gray-500 mb-4">Você ainda não criou nenhuma campanha</p>
-            <Link href="/campaigns/new">
-              <Button>Criar Primeira Campanha</Button>
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campanha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {campaigns.slice(0, 5).map((campaign: any) => {
-                  const fullUrl = campaign.customDomain 
-                    ? `https://${campaign.customDomain.domain}/r/${campaign.slug}`
-                    : `/r/${campaign.slug}`;
-                  
-                  return (
-                    <tr key={campaign.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{campaign.name}</div>
-                        <div className="text-xs text-gray-500">
-                          {campaign.variations?.length || 0} variações
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900">
-                          {fullUrl.length > 40 ? fullUrl.substring(0, 40) + '...' : fullUrl}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <Link href={`/campaigns/${campaign.id}/edit`} className="text-blue-600 hover:text-blue-900 mr-3">
-                          Editar
-                        </Link>
-                        <Link href={`/campaigns/${campaign.id}`} className="text-green-600 hover:text-green-900">
-                          Analytics
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                    return (
+                      <tr key={campaign.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-4 py-4">
+                          <div className="font-medium">{campaign.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {campaign.variations?.length || 0} variações
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {fullUrl.length > 40 ? fullUrl.substring(0, 40) + '...' : fullUrl}
+                          </code>
+                        </td>
+                        <td className="px-4 py-4 text-right text-sm">
+                          <Link href={`/campaigns/${campaign.id}/edit`} className="text-primary hover:underline mr-3">
+                            Editar
+                          </Link>
+                          <Link href={`/campaigns/${campaign.id}`} className="text-green-600 dark:text-green-400 hover:underline">
+                            Analytics
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

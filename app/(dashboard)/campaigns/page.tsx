@@ -3,8 +3,11 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
 import { PlanLimitReached } from '@/components/PlanLimitReached';
+import { Copy, Edit, BarChart3, Trash2 } from 'lucide-react';
 
 export default function CampaignsPage() {
   const { data: session } = useSession();
@@ -22,15 +25,15 @@ export default function CampaignsPage() {
     return translations[status] || status;
   };
 
-  // Cores por status
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'active': 'bg-green-100 text-green-800',
-      'paused': 'bg-yellow-100 text-yellow-800',
-      'archived': 'bg-gray-100 text-gray-800',
-      'draft': 'bg-blue-100 text-blue-800'
+  // Badge variant por status
+  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      'active': 'default',
+      'paused': 'secondary',
+      'archived': 'outline',
+      'draft': 'outline'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return variants[status] || 'outline';
   };
 
   useEffect(() => {
@@ -64,7 +67,11 @@ export default function CampaignsPage() {
     }
   };
 
-  if (loading) return <div className="p-6">Carregando...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-lg text-muted-foreground">Carregando campanhas...</div>
+    </div>
+  );
 
   // ✅ VERIFICAR LIMITE DE CAMPANHAS
   const userPlan = session?.user?.plan || 'free';
@@ -73,102 +80,130 @@ export default function CampaignsPage() {
   const canAddCampaign = campaigns.length < limits.campaigns;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
-      <div className="sm:flex sm:items-center mb-6">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Campanhas</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Campanhas</h1>
+          <p className="text-muted-foreground">
+            Gerencie suas campanhas de split testing
+          </p>
         </div>
-        {canAddCampaign ? (
+        {canAddCampaign && (
           <Link href="/campaigns/new">
             <Button>Nova Campanha</Button>
           </Link>
-        ) : null}
+        )}
       </div>
 
       {/* ✅ ALERTA DE LIMITE ATINGIDO */}
       {!canAddCampaign && (
-        <div className="mb-6">
-          <PlanLimitReached
-            resource="campanhas"
-            current={campaigns.length}
-            max={limits.campaigns}
-            planName={limits.name}
-            upgradeMessage={limits.upgradeMessage}
-          />
-        </div>
+        <PlanLimitReached
+          resource="campanhas"
+          current={campaigns.length}
+          max={limits.campaigns}
+          planName={limits.name}
+          upgradeMessage={limits.upgradeMessage}
+        />
       )}
 
       {campaigns.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 mb-4">Nenhuma campanha ainda</p>
-          {canAddCampaign && (
-            <Link href="/campaigns/new">
-              <Button>Criar Primeira Campanha</Button>
-            </Link>
-          )}
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground mb-4">Nenhuma campanha ainda</p>
+            {canAddCampaign && (
+              <Link href="/campaigns/new">
+                <Button>Criar Primeira Campanha</Button>
+              </Link>
+            )}
+          </CardContent>
+        </Card>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL Completo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {campaigns.map((c: any) => {
-                const fullUrl = c.customDomain 
-                  ? `https://${c.customDomain.domain}/r/${c.slug}`
-                  : `/r/${c.slug}`;
-                
-                return (
-                  <tr key={c.id}>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{c.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                          {fullUrl}
-                        </code>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(fullUrl.startsWith('http') ? fullUrl : `https://${window.location.host}${fullUrl}`);
-                            alert('URL copiado!');
-                          }}
-                          className="text-blue-600 hover:text-blue-900 text-xs"
-                          title="Copiar URL"
-                        >
-                          📋
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(c.status)}`}>
-                        {translateStatus(c.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm space-x-3">
-                      <Link href={`/campaigns/${c.id}/edit`} className="text-blue-600 hover:text-blue-900">
-                        Editar
-                      </Link>
-                      <Link href={`/campaigns/${c.id}`} className="text-green-600 hover:text-green-900">
-                        Analytics
-                      </Link>
-                      <button
-                        onClick={() => deleteCampaign(c.id, c.name)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Deletar
-                      </button>
-                    </td>
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Nome
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      URL Completo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Ações
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y">
+                  {campaigns.map((c: any) => {
+                    const fullUrl = c.customDomain
+                      ? `https://${c.customDomain.domain}/r/${c.slug}`
+                      : `/r/${c.slug}`;
+
+                    return (
+                      <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-6 py-4 font-medium">{c.name}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                              {fullUrl}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                navigator.clipboard.writeText(fullUrl.startsWith('http') ? fullUrl : `https://${window.location.host}${fullUrl}`);
+                                alert('URL copiado!');
+                              }}
+                              title="Copiar URL"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant={getStatusVariant(c.status)}>
+                            {translateStatus(c.status)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link href={`/campaigns/${c.id}/edit`}>
+                              <Button variant="ghost" size="sm" className="gap-1">
+                                <Edit className="h-3 w-3" />
+                                Editar
+                              </Button>
+                            </Link>
+                            <Link href={`/campaigns/${c.id}`}>
+                              <Button variant="ghost" size="sm" className="gap-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
+                                <BarChart3 className="h-3 w-3" />
+                                Analytics
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1 text-destructive hover:text-destructive"
+                              onClick={() => deleteCampaign(c.id, c.name)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Deletar
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
