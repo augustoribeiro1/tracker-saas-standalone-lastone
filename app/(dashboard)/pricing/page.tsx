@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 
 export default function PricingPage() {
@@ -38,19 +40,19 @@ export default function PricingPage() {
   const currentPlan = session?.user?.plan || 'free';
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-12">
+    <div className="py-12">
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold text-gray-900">Escolha Seu Plano</h1>
-        <p className="mt-4 text-lg text-gray-600">
+        <h1 className="text-3xl font-bold">Escolha Seu Plano</h1>
+        <p className="mt-4 text-lg text-muted-foreground">
           Escale seu negócio com as ferramentas certas
         </p>
       </div>
 
       {loading ? (
-        <div className="text-center">Carregando planos...</div>
+        <div className="text-center text-muted-foreground">Carregando planos...</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto px-4 sm:px-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
             {plans.map((plan) => {
               const price = parseFloat(plan.monthlyPrice);
 
@@ -58,35 +60,36 @@ export default function PricingPage() {
               const isCurrent = currentPlan === plan.name;
 
               return (
-                <div
+                <Card
                   key={plan.id}
-                  className={`relative rounded-2xl border-2 ${
+                  className={`relative ${
                     plan.popular
-                      ? 'border-blue-500 shadow-xl'
-                      : 'border-gray-200'
-                  } bg-white p-6 sm:p-8 ${plan.popular ? 'lg:scale-105' : ''}`}
+                      ? 'border-primary shadow-xl lg:scale-105'
+                      : ''
+                  }`}
                 >
                   {plan.popular && (
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <span className="inline-flex rounded-full bg-blue-500 px-4 py-1 text-sm font-semibold text-white">
+                      <Badge className="px-4 py-1">
                         Mais Popular
-                      </span>
+                      </Badge>
                     </div>
                   )}
 
-                  <div className="text-center">
-                    <h3 className="text-2xl font-bold text-gray-900">{plan.displayName}</h3>
+                  <CardHeader className="text-center pb-4">
+                    <CardTitle className="text-2xl">{plan.displayName}</CardTitle>
                     <div className="mt-4 flex items-baseline justify-center gap-x-2">
-                      <span className="text-5xl font-bold tracking-tight text-gray-900">
+                      <span className="text-5xl font-bold tracking-tight">
                         {formatCurrency(price)}
                       </span>
-                      <span className="text-sm font-semibold leading-6 tracking-wide text-gray-600">
+                      <span className="text-sm font-semibold text-muted-foreground">
                         /mês
                       </span>
                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <ul className="mt-8 space-y-3 text-sm leading-6 text-gray-600">
+                  <CardContent>
+                    <ul className="space-y-3 text-sm leading-6">
                     <li className="flex gap-x-3">
                       <span className="font-semibold">✓ {plan.maxCampaigns} campanhas</span>
                     </li>
@@ -106,49 +109,50 @@ export default function PricingPage() {
                         <span>✓ {feature}</span>
                       </li>
                     ))}
-                  </ul>
+                    </ul>
 
-                  <div className="mt-8">
-                    {isCurrent ? (
-                      <Button variant="outline" className="w-full" disabled>
-                        Plano Atual
-                      </Button>
-                    ) : plan.name === 'free' ? (
-                      <Button variant="outline" className="w-full" disabled>
-                        Plano Gratuito
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => handleUpgrade(plan.id)}
-                        className="w-full"
-                        variant={plan.popular ? 'default' : 'outline'}
-                      >
-                        Assinar Agora
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                    <div className="mt-8">
+                      {isCurrent ? (
+                        <Button variant="outline" className="w-full" disabled>
+                          Plano Atual
+                        </Button>
+                      ) : plan.name === 'free' ? (
+                        <Button variant="outline" className="w-full" disabled>
+                          Plano Gratuito
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleUpgrade(plan.id)}
+                          className="w-full"
+                          variant={plan.popular ? 'default' : 'outline'}
+                        >
+                          Assinar Agora
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
 
           {/* Plano Personalizado */}
-          <div className="mt-12 max-w-6xl mx-auto px-4 sm:px-0">
-            <div className="rounded-2xl border-2 border-purple-500 bg-gradient-to-br from-purple-50 to-blue-50 p-8 shadow-lg">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold text-gray-900">Plano Personalizado</h3>
-                <p className="mt-4 text-lg text-gray-600">
+          <div className="mt-12 max-w-6xl mx-auto">
+            <Card className="border-2 border-purple-500 dark:border-purple-700 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+              <CardContent className="p-8 text-center">
+                <h3 className="text-2xl font-bold">Plano Personalizado</h3>
+                <p className="mt-4 text-lg text-muted-foreground">
                   Precisa de um plano maior? Fale com nossa equipe
                 </p>
                 <div className="mt-8">
                   <a href="https://split2.com.br/contato" target="_blank" rel="noopener noreferrer">
-                    <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg">
+                    <Button className="px-8 py-3 text-lg">
                       Fale com um Consultor
                     </Button>
                   </a>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </>
       )}
@@ -156,7 +160,7 @@ export default function PricingPage() {
       {/* Customer Portal */}
       {currentPlan !== 'free' && (
         <div className="mt-12 text-center">
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Já é assinante? Gerencie sua assinatura
           </p>
           <Button

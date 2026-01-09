@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle } from 'lucide-react';
 import Script from 'next/script';
 
 declare global {
@@ -109,113 +113,120 @@ export default function SignupPage() {
         strategy="lazyOnload"
         onLoad={() => setRecaptchaLoaded(true)}
       />
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Criar Conta
-            </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              Comece seu teste grátis
-            </p>
-          </div>
-
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <div className="text-sm text-red-800">{error}</div>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  Nome
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Senha
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="mt-1 appearance-none block w-full px-3 py-2 border-2 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white text-gray-900"
-                  placeholder="••••••••"
-                />
-                {formData.password && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    {formData.password.length} caracteres digitados
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirmar Senha
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="mt-1 appearance-none block w-full px-3 py-2 border-2 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white text-gray-900"
-                  placeholder="••••••••"
-                />
-                {formData.confirmPassword && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    {formData.confirmPassword.length} caracteres digitados
-                  </p>
-                )}
-              </div>
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-4 flex flex-col items-center">
+            <img
+              src="/logo.png"
+              alt="Split2"
+              width="180"
+              height="65"
+              className="h-16 w-auto"
+              style={{ maxWidth: '180px', height: 'auto' }}
+            />
+            <div className="space-y-2 text-center">
+              <CardTitle className="text-2xl">Criar Conta</CardTitle>
+              <CardDescription>
+                Comece seu teste grátis
+              </CardDescription>
             </div>
+          </CardHeader>
 
-            {/* reCAPTCHA */}
-            <div className="flex justify-center">
-              <div ref={recaptchaRef}></div>
-            </div>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {error && (
+                <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-            <div>
-              <Button type="submit" disabled={loading} className="w-full">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Seu nome"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="seu@email.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="••••••••"
+                  />
+                  {formData.password && (
+                    <p className="text-xs text-muted-foreground">
+                      {formData.password.length} caracteres digitados
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    placeholder="••••••••"
+                  />
+                  {formData.confirmPassword && (
+                    <p className="text-xs text-muted-foreground">
+                      {formData.confirmPassword.length} caracteres digitados
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* reCAPTCHA */}
+              <div className="flex justify-center">
+                <div ref={recaptchaRef}></div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full"
+              >
                 {loading ? 'Criando conta...' : 'Criar Conta'}
               </Button>
-            </div>
 
-            <div className="text-center text-sm">
-              <span className="text-gray-600">Já tem uma conta? </span>
-              <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Fazer login
-              </Link>
-            </div>
-          </form>
-        </div>
+              <div className="text-center text-sm text-muted-foreground">
+                Já tem uma conta?{' '}
+                <Link href="/auth/login" className="text-primary hover:underline font-medium">
+                  Fazer login
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

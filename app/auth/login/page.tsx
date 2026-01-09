@@ -5,6 +5,10 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle } from 'lucide-react';
 import Script from 'next/script';
 
 declare global {
@@ -89,65 +93,66 @@ export default function LoginPage() {
         strategy="lazyOnload"
         onLoad={() => setRecaptchaLoaded(true)}
       />
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="flex flex-col items-center">
-            {/* ✅ LOGO COM <img> NATIVO (sem Next/Image) */}
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-4 flex flex-col items-center">
             <img
               src="/logo.png"
               alt="Split2"
               width="180"
               height="65"
-              className="mb-6"
+              className="h-16 w-auto"
               style={{ maxWidth: '180px', height: 'auto' }}
             />
-            <p className="mt-2 text-center text-sm text-gray-600">
-              Faça login na sua conta
-            </p>
-          </div>
-
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <div className="text-sm text-red-800">{error}</div>
-              </div>
-            )}
-
-            <div className="rounded-md shadow-sm -space-y-px">
-              <div>
-                <label htmlFor="email" className="sr-only">Email</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Email"
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="sr-only">Senha</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border-2 border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Senha"
-                />
-              </div>
+            <div className="space-y-2 text-center">
+              <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
+              <CardDescription>
+                Faça login na sua conta para continuar
+              </CardDescription>
             </div>
+          </CardHeader>
 
-            {/* reCAPTCHA */}
-            <div className="flex justify-center">
-              <div ref={recaptchaRef}></div>
-            </div>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {error && (
+                <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-            <div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              {/* reCAPTCHA */}
+              <div className="flex justify-center">
+                <div ref={recaptchaRef}></div>
+              </div>
+
               <Button
                 type="submit"
                 disabled={loading}
@@ -155,23 +160,23 @@ export default function LoginPage() {
               >
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
-            </div>
 
-            <div className="space-y-2">
-              <div className="text-center text-sm">
-                <Link href="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-                  Esqueci minha senha
-                </Link>
+              <div className="space-y-2">
+                <div className="text-center text-sm">
+                  <Link href="/auth/forgot-password" className="text-primary hover:underline">
+                    Esqueci minha senha
+                  </Link>
+                </div>
+                <div className="text-center text-sm text-muted-foreground">
+                  Não tem uma conta?{' '}
+                  <Link href="/auth/signup" className="text-primary hover:underline font-medium">
+                    Criar conta
+                  </Link>
+                </div>
               </div>
-              <div className="text-center text-sm">
-                <span className="text-gray-600">Não tem uma conta? </span>
-                <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                  Criar conta
-                </Link>
-              </div>
-            </div>
-          </form>
-        </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

@@ -3,6 +3,11 @@
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function AccountPage() {
   const { data: session } = useSession();
@@ -62,107 +67,108 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Minha Conta</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-semibold">Minha Conta</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Gerencie suas informações pessoais e segurança
         </p>
       </div>
 
       {/* Informações do Usuário */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Informações Pessoais</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nome</label>
-            <div className="mt-1 px-3 py-2 bg-gray-50 rounded-md text-gray-900">
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações Pessoais</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nome</Label>
+            <div className="px-3 py-2 bg-muted rounded-md">
               {session?.user?.name || 'Não informado'}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <div className="mt-1 px-3 py-2 bg-gray-50 rounded-md text-gray-900">
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <div className="px-3 py-2 bg-muted rounded-md">
               {session?.user?.email}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Plano Atual</label>
-            <div className="mt-1">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+          <div className="space-y-2">
+            <Label>Plano Atual</Label>
+            <div>
+              <Badge>
                 {session?.user?.plan || 'free'}
-              </span>
+              </Badge>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Alterar Senha */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Alterar Senha</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Alterar Senha</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {message && (
+            <div className={`mb-4 flex items-center gap-2 rounded-md p-3 text-sm ${
+              message.type === 'success'
+                ? 'bg-green-50 text-green-800 dark:bg-green-950/20 dark:text-green-200'
+                : 'bg-destructive/10 text-destructive'
+            }`}>
+              {message.type === 'success' ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+              <span>{message.text}</span>
+            </div>
+          )}
 
-        {message && (
-          <div className={`mb-4 p-4 rounded-md ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {message.text}
-          </div>
-        )}
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Senha Atual</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
 
-        <form onSubmit={handleUpdatePassword} className="space-y-4">
-          <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
-              Senha Atual
-            </label>
-            <input
-              id="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">Nova Senha</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+              <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+            </div>
 
-          <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
-              Nova Senha
-            </label>
-            <input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-              required
-              minLength={6}
-            />
-            <p className="mt-1 text-xs text-gray-500">Mínimo de 6 caracteres</p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
 
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-              Confirmar Nova Senha
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-2 border-gray-300 shadow-sm px-3 py-2 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Atualizando...' : 'Atualizar Senha'}
-            </Button>
-          </div>
-        </form>
-      </div>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Atualizando...' : 'Atualizar Senha'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

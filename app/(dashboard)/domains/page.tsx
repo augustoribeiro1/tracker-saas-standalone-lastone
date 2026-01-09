@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PlanLimitReached } from '@/components/PlanLimitReached';
 import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
 
@@ -111,35 +115,37 @@ export default function DomainsPage() {
   };
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Domínios Customizados</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-semibold">Domínios Customizados</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Use seu próprio domínio para os redirects (ex: track.seusite.com)
         </p>
       </div>
 
       {/* Adicionar Domínio */}
       {limits && limits.canAddMore ? (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Adicionar Novo Domínio</h2>
-          <form onSubmit={addDomain} className="flex gap-4">
-            <input
-              type="text"
-              value={newDomain}
-              onChange={(e) => setNewDomain(e.target.value)}
-              placeholder="track.seusite.com"
-              className="flex-1 rounded-md border-2 border-gray-300 shadow-sm px-3 py-2 bg-white text-gray-900"
-              required
-            />
-            <Button type="submit">Adicionar</Button>
-          </form>
-          <p className="mt-2 text-xs text-gray-500">
-            Use um subdomínio (track, go, click, etc). Domínios personalizados: {limits.current}/{limits.max}
-          </p>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="text-lg font-medium mb-4">Adicionar Novo Domínio</h2>
+            <form onSubmit={addDomain} className="flex gap-4">
+              <Input
+                type="text"
+                value={newDomain}
+                onChange={(e) => setNewDomain(e.target.value)}
+                placeholder="track.seusite.com"
+                className="flex-1"
+                required
+              />
+              <Button type="submit">Adicionar</Button>
+            </form>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Use um subdomínio (track, go, click, etc). Domínios personalizados: {limits.current}/{limits.max}
+            </p>
+          </CardContent>
+        </Card>
       ) : limits && limits.max === 0 ? (
-        <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-6">
+        <div className="bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-400 dark:border-blue-800 rounded-lg p-6">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
               <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,14 +153,14 @@ export default function DomainsPage() {
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-blue-800 mb-2">
+              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
                 Plano {limits.plan}
               </h3>
-              <p className="text-sm text-blue-700 mb-3">
+              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
                 Seu plano atual não permite domínios personalizados, mas você pode usar o domínio padrão <strong>app.split2.com.br</strong> em suas campanhas!
               </p>
               <a href="/pricing">
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button size="sm">
                   🚀 Fazer Upgrade
                 </Button>
               </a>
@@ -172,141 +178,144 @@ export default function DomainsPage() {
       )}
 
       {/* Lista de Domínios */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Domínios Configurados</h2>
-        </div>
-
-        {loading ? (
-          <div className="p-6 text-center">Carregando...</div>
-        ) : domains.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            Nenhum domínio configurado ainda
-          </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Domínio</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">DNS</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {domains.map((domain) => (
-                <tr key={domain.id} className={domain.isDefault ? 'bg-blue-50' : ''}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        {domain.domain}
-                      </span>
-                      {domain.isDefault && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                          Padrão
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(domain.status)}`}>
-                      {getStatusText(domain.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {domain.dnsConfigured ? '✅ Configurado' : '⏳ Pendente'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-4">
-                    {!domain.isDefault && (
-                      <>
-                        <button
-                          onClick={() => setShowInstructions(domain)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          Ver Instruções
-                        </button>
-                        <button
-                          onClick={() => verifyDomain(domain.id)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          {domain.dnsConfigured ? 'Verificar' : 'Verificar DNS'}
-                        </button>
-                      </>
-                    )}
-                    {domain.canDelete && (
-                      <button
-                        onClick={() => deleteDomain(domain.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Deletar
-                      </button>
-                    )}
-                    {!domain.canDelete && !domain.isDefault && (
-                      <span className="text-gray-400 text-xs">Não pode deletar</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Domínios Configurados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="p-6 text-center text-muted-foreground">Carregando...</div>
+          ) : domains.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">
+              Nenhum domínio configurado ainda
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Domínio</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">DNS</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {domains.map((domain) => (
+                    <tr key={domain.id} className={domain.isDefault ? 'bg-blue-50 dark:bg-blue-950/20' : ''}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {domain.domain}
+                          </span>
+                          {domain.isDefault && (
+                            <Badge>
+                              Padrão
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant={domain.status === 'active' ? 'default' : domain.status === 'pending' ? 'secondary' : 'outline'}>
+                          {getStatusText(domain.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {domain.dnsConfigured ? '✅ Configurado' : '⏳ Pendente'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-4">
+                        {!domain.isDefault && (
+                          <>
+                            <button
+                              onClick={() => setShowInstructions(domain)}
+                              className="text-primary hover:underline"
+                            >
+                              Ver Instruções
+                            </button>
+                            <button
+                              onClick={() => verifyDomain(domain.id)}
+                              className="text-green-600 dark:text-green-400 hover:underline"
+                            >
+                              {domain.dnsConfigured ? 'Verificar' : 'Verificar DNS'}
+                            </button>
+                          </>
+                        )}
+                        {domain.canDelete && (
+                          <button
+                            onClick={() => deleteDomain(domain.id)}
+                            className="text-destructive hover:underline"
+                          >
+                            Deletar
+                          </button>
+                        )}
+                        {!domain.canDelete && !domain.isDefault && (
+                          <span className="text-muted-foreground text-xs">Não pode deletar</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modal de Instruções DNS */}
       {showInstructions && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <Card className="max-w-2xl w-full">
+            <CardHeader>
+              <CardTitle>
                 Configurar DNS - {showInstructions.domain}
-              </h3>
-            </div>
+              </CardTitle>
+            </CardHeader>
 
-            <div className="p-6 space-y-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-sm mb-3 text-gray-900">📋 Configuração DNS:</h4>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                <h4 className="font-medium text-sm mb-3">📋 Configuração DNS:</h4>
                 <div className="space-y-2 text-sm">
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium text-gray-900">Tipo:</div>
-                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">CNAME</code></div>
+                    <div className="font-medium">Tipo:</div>
+                    <div><code className="bg-background px-2 py-1 rounded">CNAME</code></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium text-gray-900">Nome:</div>
+                    <div className="font-medium">Nome:</div>
                     <div>
-                      <code className="bg-white px-2 py-1 rounded text-gray-900">
+                      <code className="bg-background px-2 py-1 rounded">
                         {showInstructions.domain.split('.')[0]}
                       </code>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium text-gray-900">Valor:</div>
+                    <div className="font-medium">Valor:</div>
                     <div>
-                      <code className="bg-white px-2 py-1 rounded text-gray-900">
+                      <code className="bg-background px-2 py-1 rounded">
                         app.split2.com.br
                       </code>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium text-gray-900">TTL:</div>
-                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">Auto ou 300</code></div>
+                    <div className="font-medium">TTL:</div>
+                    <div><code className="bg-background px-2 py-1 rounded">Auto ou 300</code></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium text-gray-900">Proxy:</div>
-                    <div><code className="bg-white px-2 py-1 rounded text-gray-900">OFF / Nuvem Cinza</code></div>
+                    <div className="font-medium">Proxy:</div>
+                    <div><code className="bg-background px-2 py-1 rounded">OFF / Nuvem Cinza</code></div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-yellow-50 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  ⏰ <strong>Atenção:</strong> A propagação DNS pode levar de 5 minutos até 48 horas. 
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  ⏰ <strong>Atenção:</strong> A propagação DNS pode levar de 5 minutos até 48 horas.
                   Aguarde alguns minutos e clique em "Verificar DNS".
                 </p>
               </div>
 
-              <div className="text-sm text-gray-600">
+              <div className="text-sm">
                 <p className="font-medium mb-2">Passo a passo:</p>
-                <ol className="list-decimal list-inside space-y-1">
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                   <li>Acesse o painel do seu provedor de domínio (GoDaddy, Registro.br, etc)</li>
                   <li>Vá em "Gerenciar DNS" ou "Zona DNS"</li>
                   <li>Adicione um registro CNAME com os dados acima</li>
@@ -315,9 +324,9 @@ export default function DomainsPage() {
                   <li>Clique em "Verificar DNS" aqui no painel</li>
                 </ol>
               </div>
-            </div>
+            </CardContent>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+            <div className="px-6 py-4 border-t flex justify-end gap-2">
               {!showInstructions.dnsConfigured && (
                 <Button
                   variant="outline"
@@ -333,7 +342,7 @@ export default function DomainsPage() {
                 Fechar
               </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>
