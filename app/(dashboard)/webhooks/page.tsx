@@ -167,7 +167,7 @@ export default function WebhooksPage() {
                   onClick={() => setShowPlatformModal(true)}
                   className="flex items-center gap-2"
                 >
-                  <span>➕</span> Adicionar Novo
+                  Adicionar Novo
                 </Button>
               </div>
             </CardContent>
@@ -212,12 +212,9 @@ export default function WebhooksPage() {
                     return (
                       <tr key={webhook.id}>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{platformInfo?.icon || '📦'}</span>
-                            <Badge>
-                              {platformInfo?.name || webhook.platform}
-                            </Badge>
-                          </div>
+                          <Badge>
+                            {platformInfo?.name || webhook.platform}
+                          </Badge>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
@@ -229,7 +226,7 @@ export default function WebhooksPage() {
                               className="text-primary hover:underline text-sm"
                               title="Copiar URL completa"
                             >
-                              📋
+                              Copiar
                             </button>
                           </div>
                         </td>
@@ -290,7 +287,7 @@ export default function WebhooksPage() {
                 onClick={() => fetchConversions(currentPage)}
                 disabled={conversionsLoading}
               >
-                🔄 Atualizar
+                Atualizar
               </Button>
             </div>
           </div>
@@ -444,15 +441,12 @@ export default function WebhooksPage() {
                       disabled={creatingPlatform === platform.id}
                       className="p-4 border-2 rounded-lg hover:border-primary hover:bg-accent transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <div className="flex items-start gap-3">
-                        <span className="text-3xl">{platform.icon}</span>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{platform.name}</h4>
-                          <p className="text-sm text-muted-foreground mt-1">{platform.description}</p>
-                          {creatingPlatform === platform.id && (
-                            <p className="text-xs text-primary mt-2">Criando...</p>
-                          )}
-                        </div>
+                      <div>
+                        <h4 className="font-medium">{platform.name}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">{platform.description}</p>
+                        {creatingPlatform === platform.id && (
+                          <p className="text-xs text-primary mt-2">Criando...</p>
+                        )}
                       </div>
                     </button>
                   ))}
@@ -497,14 +491,14 @@ export default function WebhooksPage() {
                     size="sm"
                     onClick={() => copyToClipboard(selectedWebhook.webhookUrl)}
                   >
-                    📋 Copiar
+                    Copiar
                   </Button>
                 </div>
               </div>
 
               {/* Instruções */}
               <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                <h4 className="font-medium text-sm mb-3 text-blue-900 dark:text-blue-200">📋 Passo a Passo:</h4>
+                <h4 className="font-medium text-sm mb-3 text-blue-900 dark:text-blue-200">Passo a Passo:</h4>
                 <ol className="text-sm text-blue-900 dark:text-blue-300 space-y-2 list-decimal list-inside">
                   <li>Acesse o painel da {WEBHOOK_PLATFORMS[selectedWebhook.platform.toLowerCase() as keyof typeof WEBHOOK_PLATFORMS]?.name}</li>
                   <li>Vá em Configurações → Webhooks ou Postback</li>
