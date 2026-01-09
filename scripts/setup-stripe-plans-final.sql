@@ -133,6 +133,7 @@ SELECT
   "stripeProductId",
   "stripePriceIdMonthly",
   "maxCampaigns",
+  "maxVariations",
   "maxDomains",
   active
 FROM "Plan"
