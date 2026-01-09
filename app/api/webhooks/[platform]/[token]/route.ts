@@ -462,7 +462,18 @@ export async function GET(
 
     if (!user) {
       console.log('[Webhook] Invalid token:', token);
-      return NextResponse.json({ error: 'Invalid webhook token' }, { status: 401 });
+      // ✅ Retornar pixel transparente mesmo com token inválido (para não bloquear validação)
+      return new NextResponse(
+        Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/gif',
+            'Content-Length': '43',
+            'Cache-Control': 'no-cache'
+          }
+        }
+      );
     }
 
     console.log('[Webhook] User found:', user.email);
@@ -476,7 +487,7 @@ export async function GET(
       console.log('[Webhook] Available params:', Array.from(searchParams.keys()));
 
       // Registrar como não rastreado
-      const event = await db.event.create({
+      await db.event.create({
         data: {
           eventType: 'purchase',
           eventName: 'Postback without clickId',
@@ -486,11 +497,18 @@ export async function GET(
         }
       });
 
-      return NextResponse.json({
-        success: true,
-        tracked: false,
-        eventId: event.id
-      });
+      // ✅ Retornar pixel transparente 1x1 (GIF)
+      return new NextResponse(
+        Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/gif',
+            'Content-Length': '43',
+            'Cache-Control': 'no-cache'
+          }
+        }
+      );
     }
 
     // ✅ CLICKID ENCONTRADO!
@@ -512,7 +530,7 @@ export async function GET(
     if (!click) {
       console.warn('[Webhook] Click not found in database:', clickId);
 
-      const event = await db.event.create({
+      await db.event.create({
         data: {
           eventType: 'purchase',
           eventName: 'Postback with invalid clickId',
@@ -522,12 +540,18 @@ export async function GET(
         }
       });
 
-      return NextResponse.json({
-        success: true,
-        tracked: false,
-        reason: 'click_not_found',
-        eventId: event.id
-      });
+      // ✅ Retornar pixel mesmo quando click não encontrado
+      return new NextResponse(
+        Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/gif',
+            'Content-Length': '43',
+            'Cache-Control': 'no-cache'
+          }
+        }
+      );
     }
 
     console.log('[Webhook] Click found:', {
@@ -558,7 +582,7 @@ export async function GET(
                        'Postback Conversion';
 
     // ✅ REGISTRAR CONVERSÃO
-    const event = await db.event.create({
+    await db.event.create({
       data: {
         eventType: 'purchase',
         eventName: productName,
@@ -575,7 +599,6 @@ export async function GET(
     });
 
     console.log('[Webhook] ✅ Postback conversion tracked:', {
-      eventId: event.id,
       clickId: click.clickid,
       campaignId: click.campaignId,
       variationId: click.variationId,
@@ -583,19 +606,33 @@ export async function GET(
       product: productName
     });
 
-    return NextResponse.json({
-      success: true,
-      tracked: true,
-      eventId: event.id,
-      campaignId: click.campaignId,
-      variationId: click.variationId
-    });
+    // ✅ RETORNAR PIXEL TRANSPARENTE 1x1 (GIF base64)
+    // Todas as plataformas de pagamento aceitam pixel como confirmação
+    return new NextResponse(
+      Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/gif',
+          'Content-Length': '43',
+          'Cache-Control': 'no-cache'
+        }
+      }
+    );
 
   } catch (error) {
     console.error('[Webhook] GET Error:', error);
-    return NextResponse.json(
-      { success: true }, // ✅ Sempre retorna 200 OK para não retrigger
-      { status: 200 }
+    // ✅ Retornar pixel mesmo em caso de erro
+    return new NextResponse(
+      Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/gif',
+          'Content-Length': '43',
+          'Cache-Control': 'no-cache'
+        }
+      }
     );
   }
 }
