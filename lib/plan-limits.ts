@@ -12,7 +12,7 @@ export const PLAN_LIMITS = {
   2: { // STARTER
     name: 'Starter',
     campaigns: 3,
-    webhooks: 3,
+    webhooks: 2,
     customDomains: 1,
     variations: 2,
     views: Infinity,
@@ -22,8 +22,8 @@ export const PLAN_LIMITS = {
     name: 'Pro',
     campaigns: 10,
     webhooks: 5,
-    customDomains: 5,
-    variations: 2,
+    customDomains: 3,
+    variations: 3,
     views: Infinity,
     upgradeMessage: 'Entre em contato com o suporte para um plano personalizado'
   }
