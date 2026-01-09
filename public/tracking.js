@@ -47,7 +47,7 @@
       'utm_medium',
       'utm_campaign',
       'utm_content',
-      // utm_term será IGNORADO (substituído pelo Split2)
+      // utm_term e cid serão IGNORADOS (substituídos pelo Split2)
       
       // Parâmetros do Google Ads
       'gclid',      // Google Click ID
@@ -90,8 +90,9 @@
       }
     });
 
-    // ⚠️ IMPORTANTE: REMOVER utm_term se existir (será substituído)
+    // ⚠️ IMPORTANTE: REMOVER utm_term e cid se existirem (serão substituídos pelo Split2)
     delete trafficParams.utm_term;
+    delete trafficParams.cid;
 
     console.log('[Split2 Tracking] 📊 Parâmetros do tráfego capturados:', trafficParams);
     
@@ -181,10 +182,14 @@
                 url.searchParams.set(key, trafficParams[key]);
               }
             });
-            
-            // ✅ ADICIONAR utm_term (tracking code do Split2)
+
+            // ✅ ADICIONAR utm_term (tracking code do Split2 - PRINCIPAL)
             // SEMPRE sobrescrever utm_term (mesmo se já existir)
             url.searchParams.set('utm_term', trackingCode);
+
+            // ✅ ADICIONAR cid (tracking code do Split2 - BACKUP)
+            // SEMPRE sobrescrever cid (mesmo se já existir)
+            url.searchParams.set('cid', trackingCode);
             
             // Atualizar link
             link.setAttribute('href', url.toString());
