@@ -14,6 +14,7 @@ export default function NewCampaignPage() {
   const [domains, setDomains] = useState<any[]>([]);
   const [campaignsCount, setCampaignsCount] = useState(0);
   const [loadingLimits, setLoadingLimits] = useState(true);
+  const [use3Variations, setUse3Variations] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -64,6 +65,13 @@ export default function NewCampaignPage() {
   const totalWeight = formData.variations.reduce((sum, v) => sum + (v.weight || 0), 0);
   const isWeightValid = totalWeight === 100;
 
+  // Verificar se o usuário é PRO (pode usar 3 variações)
+  const userPlan = session?.user?.plan || 'free';
+  const planId = planNameToId(userPlan);
+  const limits = getPlanLimits(planId);
+  const isPro = planId === 3;
+  const maxVariations = limits.variations;
+
   // Gerar URL completo
   const selectedDomain = domains.find(d => d.id.toString() === formData.customDomainId);
   const isDefaultDomain = selectedDomain?.domain === 'app.split2.com.br';
@@ -108,6 +116,35 @@ export default function NewCampaignPage() {
       return url;
     }
     return 'https://' + url;
+  };
+
+  // Handler para ativar/desativar 3 variações (apenas PRO)
+  const handleToggle3Variations = (checked: boolean) => {
+    setUse3Variations(checked);
+
+    if (checked) {
+      // Adicionar 3ª variação com distribuição igual (33.33% cada)
+      const newWeight = Math.floor(100 / 3);
+      const remainder = 100 - (newWeight * 3);
+
+      setFormData({
+        ...formData,
+        variations: [
+          { ...formData.variations[0], weight: newWeight + remainder },
+          { ...formData.variations[1], weight: newWeight },
+          { name: 'Variação C', destinationUrl: '', weight: newWeight }
+        ]
+      });
+    } else {
+      // Remover 3ª variação e redistribuir para 50/50
+      setFormData({
+        ...formData,
+        variations: [
+          { ...formData.variations[0], weight: 50 },
+          { ...formData.variations[1], weight: 50 }
+        ]
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,9 +214,6 @@ export default function NewCampaignPage() {
       
       {/* ✅ VERIFICAR LIMITE DE CAMPANHAS */}
       {!loadingLimits && (() => {
-        const userPlan = session?.user?.plan || 'free';
-        const planId = planNameToId(userPlan);
-        const limits = getPlanLimits(planId);
         const canAdd = campaignsCount < limits.campaigns;
 
         if (!canAdd) {
@@ -301,6 +335,29 @@ export default function NewCampaignPage() {
             <p className="mt-2 text-xs text-blue-700">
               Use esta URL nos seus anúncios do Meta Ads, Google Ads, TikTok Ads, etc.
             </p>
+          </div>
+        )}
+
+        {/* Checkbox para 3 variações (apenas PRO) */}
+        {isPro && (
+          <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="use3Variations"
+                checked={use3Variations}
+                onChange={e => handleToggle3Variations(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <div className="flex-1">
+                <label htmlFor="use3Variations" className="block text-sm font-medium text-purple-900 cursor-pointer">
+                  Quero testar 3 variações nessa campanha
+                </label>
+                <p className="text-sm text-purple-700 mt-1">
+                  Como usuário PRO, você pode testar até 3 variações simultaneamente. Ao marcar esta opção, uma terceira variação será adicionada automaticamente.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
