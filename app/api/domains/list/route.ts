@@ -5,6 +5,9 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
 
+// ✅ Forçar rota dinâmica (usa headers para autenticação)
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
