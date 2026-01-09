@@ -256,7 +256,7 @@ function PurchasesTable({ campaignId }: { campaignId: string }) {
   const fetchConversions = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/webhooks/conversions?campaignId=${campaignId}&page=${page}&per_page=50`);
+      const res = await fetch(`/api/webhooks/conversions?campaignId=${campaignId}&page=${page}&per_page=30`);
       const data = await res.json();
       setConversions(data.conversions || []);
       setPagination(data.pagination || { totalPages: 1, total: 0 });
