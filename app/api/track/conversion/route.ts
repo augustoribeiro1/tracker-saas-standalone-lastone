@@ -9,7 +9,7 @@ import { db } from '@/lib/db';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { slug, domain, clickid } = body;
+    const { slug, domain, clickid, urlParams } = body;
 
     if (!slug) {
       return NextResponse.json(
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
 
     const customDomain = domain || request.headers.get('host');
     console.log('[/api/track/conversion] Slug:', slug, 'Clickid:', clickid);
+    console.log('[/api/track/conversion] URL Params received:', urlParams);
 
     // Buscar campanha com variations
     const campaign = await db.campaign.findFirst({
@@ -95,7 +96,27 @@ export async function POST(request: NextRequest) {
       checkoutUrl = 'https://' + checkoutUrl;
     }
 
-    console.log('[/api/track/conversion] Checkout URL:', checkoutUrl);
+    // ✅ Adicionar parâmetros UTM e outros da URL original ao checkout
+    if (urlParams && typeof urlParams === 'object') {
+      try {
+        const checkoutUrlObj = new URL(checkoutUrl);
+
+        // Adicionar todos os parâmetros recebidos
+        Object.entries(urlParams).forEach(([key, value]) => {
+          if (value && !checkoutUrlObj.searchParams.has(key)) {
+            checkoutUrlObj.searchParams.set(key, String(value));
+          }
+        });
+
+        checkoutUrl = checkoutUrlObj.toString();
+        console.log('[/api/track/conversion] Checkout URL with params:', checkoutUrl);
+      } catch (urlError) {
+        console.error('[/api/track/conversion] Error adding params to URL:', urlError);
+        console.log('[/api/track/conversion] Checkout URL (without params):', checkoutUrl);
+      }
+    } else {
+      console.log('[/api/track/conversion] Checkout URL (no params):', checkoutUrl);
+    }
 
     // ✅ REGISTRAR CONVERSÃO NA TABELA EVENT (NÃO EM CONVERSION!)
     try {
