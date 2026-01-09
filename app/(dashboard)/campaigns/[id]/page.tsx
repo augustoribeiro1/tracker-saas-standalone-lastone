@@ -310,6 +310,7 @@ function PurchasesTable({ campaignId }: { campaignId: string }) {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Source</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Medium</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Campaign</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Term</th>
                 </tr>
@@ -325,6 +326,9 @@ function PurchasesTable({ campaignId }: { campaignId: string }) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {conversion.utmSource || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {conversion.utmMedium || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {conversion.utmCampaign || '-'}
