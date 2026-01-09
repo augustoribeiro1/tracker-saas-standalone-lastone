@@ -5,7 +5,29 @@ import { db } from '@/lib/db';
 const CLICKID_PREFIX = 'split2_';
 
 /**
- * ✅ BUSCA RECURSIVA MELHORADA (com debug)
+ * ✅ BUSCA CLICKID EM QUERY PARAMS (POSTBACK)
+ * Percorre todos os parâmetros da URL buscando split2_
+ */
+function findClickIdInQueryParams(searchParams: URLSearchParams): string | null {
+  for (const [key, value] of searchParams.entries()) {
+    // Decodificar URL encoding (ex: split2%5FABC -> split2_ABC)
+    const decodedValue = decodeURIComponent(value);
+
+    // Buscar padrão split2_
+    const regex = new RegExp(`${CLICKID_PREFIX}[A-Za-z0-9_-]{20}`, 'g');
+    const match = decodedValue.match(regex);
+
+    if (match) {
+      console.log(`[Webhook] ✅ Found split2_ in query param [${key}]: ${decodedValue}`);
+      return match[0]; // Retorna o primeiro encontrado
+    }
+  }
+
+  return null;
+}
+
+/**
+ * ✅ BUSCA RECURSIVA MELHORADA (com debug) - PAYLOAD JSON
  * Aceita formato: 17-33-split2_FxmROdTF92_f4r6uVs3s
  */
 function findClickIdInObject(obj: any, path: string = 'root'): string | null {
@@ -219,7 +241,13 @@ export async function POST(
     const { platform, token } = params;
     const body = await request.json();
 
-    console.log('[Webhook] Received:', platform, JSON.stringify(body, null, 2));
+    console.log('[Webhook] Received POST:', platform, JSON.stringify(body, null, 2));
+
+    // ✅ BUSCAR NOS QUERY PARAMS TAMBÉM (suporte híbrido)
+    const searchParams = request.nextUrl.searchParams;
+    if (searchParams.size > 0) {
+      console.log('[Webhook] Query params detected:', Object.fromEntries(searchParams));
+    }
 
     // ✅ VALIDAR TOKEN
     const user = await db.user.findUnique({
@@ -233,9 +261,18 @@ export async function POST(
 
     console.log('[Webhook] User found:', user.email);
 
-    // ✅ BUSCAR CLICKID COM DEBUG
+    // ✅ BUSCAR CLICKID - PRIMEIRO EM QUERY PARAMS, DEPOIS NO BODY
     console.log('[Webhook] Searching for split2_ prefix...');
-    const clickIdWithPrefix = findClickIdInObject(body);
+
+    let clickIdWithPrefix = findClickIdInQueryParams(searchParams);
+    if (clickIdWithPrefix) {
+      console.log('[Webhook] ✅ Found in query params (postback style)');
+    } else {
+      clickIdWithPrefix = findClickIdInObject(body);
+      if (clickIdWithPrefix) {
+        console.log('[Webhook] ✅ Found in body (webhook style)');
+      }
+    }
     
     if (!clickIdWithPrefix) {
       console.log('[Webhook] ❌ NO split2_ found in entire payload');
@@ -406,14 +443,159 @@ export async function POST(
   }
 }
 
-// ✅ Aceita GET também (algumas plataformas fazem verificação)
+// ✅ ACEITAR POSTBACK VIA GET (PerfectPay, Hotmart, etc.)
 export async function GET(
   request: NextRequest,
   { params }: { params: { platform: string; token: string } }
 ) {
-  return NextResponse.json({
-    status: 'ok',
-    platform: params.platform,
-    message: 'Webhook endpoint is ready'
-  });
+  try {
+    const { platform, token } = params;
+    const searchParams = request.nextUrl.searchParams;
+
+    console.log('[Webhook] Received GET (postback):', platform);
+    console.log('[Webhook] Query params:', Object.fromEntries(searchParams));
+
+    // ✅ VALIDAR TOKEN
+    const user = await db.user.findUnique({
+      where: { webhookToken: token }
+    });
+
+    if (!user) {
+      console.log('[Webhook] Invalid token:', token);
+      return NextResponse.json({ error: 'Invalid webhook token' }, { status: 401 });
+    }
+
+    console.log('[Webhook] User found:', user.email);
+
+    // ✅ BUSCAR CLICKID NOS QUERY PARAMS
+    console.log('[Webhook] Searching for split2_ in query params...');
+    const clickIdWithPrefix = findClickIdInQueryParams(searchParams);
+
+    if (!clickIdWithPrefix) {
+      console.log('[Webhook] ❌ NO split2_ found in query params');
+      console.log('[Webhook] Available params:', Array.from(searchParams.keys()));
+
+      // Registrar como não rastreado
+      const event = await db.event.create({
+        data: {
+          eventType: 'purchase',
+          eventName: 'Postback without clickId',
+          eventValue: 0,
+          clickId: 'untracked',
+          userId: user.id
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        tracked: false,
+        eventId: event.id
+      });
+    }
+
+    // ✅ CLICKID ENCONTRADO!
+    console.log('[Webhook] ✅ Found clickId with prefix:', clickIdWithPrefix);
+
+    // Remover prefixo split2_
+    const clickId = clickIdWithPrefix.replace(CLICKID_PREFIX, '');
+    console.log('[Webhook] Clean clickId:', clickId);
+
+    // ✅ BUSCAR CLICK NO BANCO
+    const click = await db.click.findUnique({
+      where: { clickid: clickId },
+      include: {
+        campaign: true,
+        variation: true
+      }
+    });
+
+    if (!click) {
+      console.warn('[Webhook] Click not found in database:', clickId);
+
+      const event = await db.event.create({
+        data: {
+          eventType: 'purchase',
+          eventName: 'Postback with invalid clickId',
+          eventValue: 0,
+          clickId: clickId,
+          userId: user.id
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        tracked: false,
+        reason: 'click_not_found',
+        eventId: event.id
+      });
+    }
+
+    console.log('[Webhook] Click found:', {
+      clickId: click.clickid,
+      campaignId: click.campaignId,
+      variationId: click.variationId
+    });
+
+    // ✅ TENTAR EXTRAIR VALOR DOS QUERY PARAMS
+    let value = 0;
+    const valueParams = ['value', 'amount', 'price', 'total', 'charge_amount'];
+    for (const param of valueParams) {
+      const paramValue = searchParams.get(param);
+      if (paramValue) {
+        const numValue = parseFloat(paramValue);
+        if (!isNaN(numValue)) {
+          value = numValue > 1000 ? numValue / 100 : numValue;
+          console.log(`[Webhook] Found value in param [${param}]:`, value);
+          break;
+        }
+      }
+    }
+
+    // ✅ EXTRAIR NOME DO PRODUTO
+    const productName = searchParams.get('product') ||
+                       searchParams.get('product_name') ||
+                       searchParams.get('item_name') ||
+                       'Postback Conversion';
+
+    // ✅ REGISTRAR CONVERSÃO
+    const event = await db.event.create({
+      data: {
+        eventType: 'purchase',
+        eventName: productName,
+        eventValue: value,
+        clickId: click.clickid,
+        campaignId: click.campaignId,
+        variationId: click.variationId,
+        utmSource: searchParams.get('utm_source'),
+        utmMedium: searchParams.get('utm_medium'),
+        utmCampaign: searchParams.get('utm_campaign'),
+        utmContent: searchParams.get('utm_content'),
+        utmTerm: searchParams.get('utm_term')
+      }
+    });
+
+    console.log('[Webhook] ✅ Postback conversion tracked:', {
+      eventId: event.id,
+      clickId: click.clickid,
+      campaignId: click.campaignId,
+      variationId: click.variationId,
+      value,
+      product: productName
+    });
+
+    return NextResponse.json({
+      success: true,
+      tracked: true,
+      eventId: event.id,
+      campaignId: click.campaignId,
+      variationId: click.variationId
+    });
+
+  } catch (error) {
+    console.error('[Webhook] GET Error:', error);
+    return NextResponse.json(
+      { success: true }, // ✅ Sempre retorna 200 OK para não retrigger
+      { status: 200 }
+    );
+  }
 }
