@@ -267,11 +267,6 @@ function PurchasesTable({ campaignId }: { campaignId: string }) {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('Copiado para a área de transferência!');
-  };
-
   if (loading) {
     return (
       <div className="bg-white shadow rounded-lg p-6">
@@ -294,13 +289,11 @@ function PurchasesTable({ campaignId }: { campaignId: string }) {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          <div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Click ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campanha</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Source</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UTM Campaign</th>
@@ -312,25 +305,6 @@ function PurchasesTable({ campaignId }: { campaignId: string }) {
                   <tr key={conversion.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(conversion.createdAt).toLocaleString('pt-BR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                          {conversion.clickId || 'N/A'}
-                        </code>
-                        {conversion.clickId && (
-                          <button
-                            onClick={() => copyToClipboard(conversion.clickId)}
-                            className="text-gray-400 hover:text-gray-600"
-                            title="Copiar Click ID"
-                          >
-                            📋
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {conversion.campaign?.name || 'Não rastreado'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {formatCurrency(parseFloat(conversion.eventValue || 0))}
