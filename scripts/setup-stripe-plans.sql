@@ -18,7 +18,7 @@ VALUES (
   2,
   1000,
   0,
-  'tracking_basico,analytics_simples',
+  '["Tracking básico","Analytics simples"]',
   0,
   0,
   'BRL',
@@ -39,7 +39,7 @@ VALUES (
   2,
   999999,
   1,
-  'tracking_basico,analytics_avancado,webhooks_2,dominio_custom_1',
+  '["Tracking básico","Analytics avançado","2 webhooks","1 domínio custom"]',
   97,  -- R$ 97/mês
   970, -- R$ 970/ano (equivalente a ~R$ 80.83/mês)
   'prod_TlKgGXZyTRs2k8',  -- Product ID do Stripe
@@ -62,7 +62,7 @@ VALUES (
   3,
   999999,
   3,
-  'tracking_completo,analytics_premium,webhooks_5,dominios_custom_3,suporte_prioritario',
+  '["Tracking completo","Analytics premium","5 webhooks","3 domínios custom","Suporte prioritário"]',
   197,  -- R$ 197/mês
   1970, -- R$ 1970/ano (equivalente a ~R$ 164.17/mês)
   'prod_TlKhFlnvjShnJm',  -- Product ID do Stripe
