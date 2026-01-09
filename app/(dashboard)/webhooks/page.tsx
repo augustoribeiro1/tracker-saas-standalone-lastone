@@ -314,7 +314,14 @@ export default function WebhooksPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {conversions.map((conversion) => (
-                    <tr key={conversion.id} className="hover:bg-gray-50">
+                    <tr
+                      key={conversion.id}
+                      className={`${
+                        conversion.clickId
+                          ? 'bg-green-50 hover:bg-green-100'
+                          : 'bg-red-50 hover:bg-red-100'
+                      }`}
+                    >
                       <td className="px-4 py-3 text-sm">
                         {conversion.campaign ? (
                           <a
@@ -329,11 +336,11 @@ export default function WebhooksPage() {
                       </td>
                       <td className="px-4 py-3">
                         {conversion.clickId ? (
-                          <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-mono">
+                          <code className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-mono">
                             {conversion.clickId.substring(0, 12)}...
                           </code>
                         ) : (
-                          <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded">
+                          <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded font-semibold">
                             Não rastreado
                           </span>
                         )}
