@@ -7,6 +7,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 
+// ✅ Features estáticas dos planos (editáveis diretamente aqui)
+const PLAN_FEATURES: Record<string, string[]> = {
+  free: [
+    'Webhooks limitados',
+    'Analytics básico',
+    'Suporte por email'
+  ],
+  starter: [
+    'Webhooks ilimitados',
+    'Analytics avançado',
+    '1 domínio customizado',
+    'Retenção de dados: 90 dias',
+    'Suporte prioritário'
+  ],
+  pro: [
+    'Webhooks ilimitados',
+    'Analytics completo',
+    '3 domínios customizados',
+    'Retenção de dados: 180 dias',
+    'Suporte prioritário',
+    'API dedicada'
+  ]
+};
+
 export default function PricingPage() {
   const { data: session } = useSession();
   const [plans, setPlans] = useState<any[]>([]);
@@ -56,7 +80,8 @@ export default function PricingPage() {
             {plans.map((plan) => {
               const price = parseFloat(plan.monthlyPrice);
 
-              const features = Array.isArray(plan.features) ? plan.features : JSON.parse(plan.features || '[]');
+              // ✅ Usar features estáticas do objeto PLAN_FEATURES
+              const features = PLAN_FEATURES[plan.name] || [];
               const isCurrent = currentPlan === plan.name;
 
               return (
