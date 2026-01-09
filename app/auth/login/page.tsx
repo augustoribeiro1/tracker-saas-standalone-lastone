@@ -29,14 +29,21 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (recaptchaLoaded && recaptchaRef.current && !recaptchaWidgetId.current) {
-      try {
-        recaptchaWidgetId.current = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: '6LfN3EQsAAAAAA6mWfm8xdn4TQFiCx6_GA55i43X',
-          theme: 'light',
-        });
-      } catch (error) {
-        console.error('Error rendering reCAPTCHA:', error);
-      }
+      // Aguardar um pouco para garantir que window.grecaptcha.render está disponível
+      const timer = setTimeout(() => {
+        try {
+          if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+            recaptchaWidgetId.current = window.grecaptcha.render(recaptchaRef.current, {
+              sitekey: '6LfN3EQsAAAAAA6mWfm8xdn4TQFiCx6_GA55i43X',
+              theme: 'light',
+            });
+          }
+        } catch (error) {
+          console.error('Error rendering reCAPTCHA:', error);
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [recaptchaLoaded]);
 
@@ -89,7 +96,7 @@ export default function LoginPage() {
   return (
     <>
       <Script
-        src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit"
+        src="https://www.google.com/recaptcha/api.js?render=explicit"
         strategy="lazyOnload"
         onLoad={() => setRecaptchaLoaded(true)}
       />
