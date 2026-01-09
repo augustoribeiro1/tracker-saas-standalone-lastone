@@ -119,7 +119,9 @@ export async function POST(request: NextRequest) {
         name: variation.name,
         destinationUrl: variation.destinationUrl,
         trafficPercentage: variation.trafficPercentage
-      }
+      },
+      trackingParamPrimary: campaign.user.trackingParamPrimary || 'utm_term',
+      trackingParamBackup: campaign.user.trackingParamBackup || 'subid'
     });
 
   } catch (error) {
