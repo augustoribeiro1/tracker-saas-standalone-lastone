@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 
 export default function AccountPage() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -66,11 +66,14 @@ export default function AccountPage() {
       if (res.ok) {
         setTrackingMessage({ type: 'success', text: 'Parâmetros atualizados com sucesso!' });
         setTrackingConfirmation('');
+
+        // ✅ Atualizar sessão do NextAuth
+        await updateSession();
+
         setTimeout(() => {
           setDialogOpen(false);
           setTrackingMessage(null);
-          window.location.reload(); // Recarregar para atualizar a sessão
-        }, 2000);
+        }, 1500);
       } else {
         setTrackingMessage({ type: 'error', text: data.error || 'Erro ao atualizar parâmetros' });
       }
