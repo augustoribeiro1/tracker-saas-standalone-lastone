@@ -13,15 +13,21 @@ export async function GET(
   const requestDomain = searchParams.get('domain') || request.headers.get('x-forwarded-host');
   
   try {
-    // 1. Buscar campanha
+    // 1. Buscar campanha com dados do usuário (incluindo parâmetros de tracking)
     const campaign = await db.campaign.findFirst({
-      where: { 
+      where: {
         slug,
         status: 'active'
       },
-      include: { 
-        variations: { 
+      include: {
+        variations: {
           orderBy: { id: 'asc' }
+        },
+        user: {
+          select: {
+            trackingParamPrimary: true,
+            trackingParamBackup: true
+          }
         }
       }
     });
@@ -106,7 +112,9 @@ export async function GET(
       clickId,
       variationId,
       campaignId: campaign.id,
-      variationName: variation.name
+      variationName: variation.name,
+      trackingParamPrimary: campaign.user.trackingParamPrimary || 'utm_term',
+      trackingParamBackup: campaign.user.trackingParamBackup || 'subid'
     });
     
   } catch (error) {

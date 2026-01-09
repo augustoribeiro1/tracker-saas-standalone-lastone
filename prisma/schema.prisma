@@ -23,7 +23,10 @@ model User {
   status           String  @default("active")
   
   webhookToken     String? @unique  // ✅ NOVO: Token único para webhooks
-  
+
+  trackingParamPrimary String @default("utm_term")  // ✅ Parâmetro primário para injeção de clickId
+  trackingParamBackup  String @default("subid")     // ✅ Parâmetro backup para injeção de clickId
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   

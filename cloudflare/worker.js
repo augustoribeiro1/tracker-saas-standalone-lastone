@@ -71,7 +71,23 @@ async function handleRequest(request) {
         /<head>/i,
         `<head><base href="${destinationDomain}/">`
       );
-      
+
+      // ✅ Injetar variáveis globais para tracking.js
+      const trackingScript = `
+<script>
+  window.__SPLIT2_TEST_ID__ = ${data.campaignId};
+  window.__SPLIT2_VARIATION_ID__ = ${data.variationId};
+  window.__SPLIT2_CLICK_ID__ = "${data.clickId}";
+  window.__SPLIT2_TRACKING_PARAM_PRIMARY__ = "${data.trackingParamPrimary || 'utm_term'}";
+  window.__SPLIT2_TRACKING_PARAM_BACKUP__ = "${data.trackingParamBackup || 'subid'}";
+</script>`;
+
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', trackingScript + '</head>');
+      } else if (html.includes('<body')) {
+        html = html.replace('<body', trackingScript + '<body');
+      }
+
       // 4. Retornar HTML mantendo URL original
       return new Response(html, {
         status: 200,

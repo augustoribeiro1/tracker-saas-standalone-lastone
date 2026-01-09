@@ -35,8 +35,10 @@
 
   /**
    * ✅ CAPTURA TODOS OS PARÂMETROS DA URL DO TRÁFEGO
+   * @param {string} primaryParam - Parâmetro primário a ignorar (ex: utm_term)
+   * @param {string} backupParam - Parâmetro backup a ignorar (ex: subid)
    */
-  function getTrafficParams() {
+  function getTrafficParams(primaryParam = 'utm_term', backupParam = 'subid') {
     const params = new URLSearchParams(window.location.search);
     const trafficParams = {};
 
@@ -47,7 +49,7 @@
       'utm_medium',
       'utm_campaign',
       'utm_content',
-      // utm_term e subid serão IGNORADOS (substituídos pelo Split2)
+      // Parâmetros de tracking customizados serão IGNORADOS (substituídos pelo Split2)
       
       // Parâmetros do Google Ads
       'gclid',      // Google Click ID
@@ -90,12 +92,13 @@
       }
     });
 
-    // ⚠️ IMPORTANTE: REMOVER utm_term e subid se existirem (serão substituídos pelo Split2)
-    delete trafficParams.utm_term;
-    delete trafficParams.subid;
+    // ⚠️ IMPORTANTE: REMOVER parâmetros customizados se existirem (serão substituídos pelo Split2)
+    delete trafficParams[primaryParam];
+    delete trafficParams[backupParam];
 
     console.log('[Split2 Tracking] 📊 Parâmetros do tráfego capturados:', trafficParams);
-    
+    console.log('[Split2 Tracking] ⚠️ Parâmetros ignorados:', primaryParam, backupParam);
+
     return trafficParams;
   }
 
@@ -105,10 +108,16 @@
     const variationId = window.__SPLIT2_VARIATION_ID__ || null;
     const apiClickId = window.__SPLIT2_CLICK_ID__ || null;
 
+    // ✅ 2. CAPTURAR PARÂMETROS CUSTOMIZADOS DE TRACKING DO USUÁRIO
+    const trackingParamPrimary = window.__SPLIT2_TRACKING_PARAM_PRIMARY__ || 'utm_term';
+    const trackingParamBackup = window.__SPLIT2_TRACKING_PARAM_BACKUP__ || 'subid';
+
     console.log('[Split2 Tracking] 📋 Dados do Split2:', {
       testId,
       variationId,
-      apiClickId
+      apiClickId,
+      trackingParamPrimary,
+      trackingParamBackup
     });
 
     if (!testId || !variationId) {
@@ -133,8 +142,8 @@
     const trackingCode = `${testId}-${variationId}-${clickIdWithPrefix}`;
     console.log('[Split2 Tracking] 📝 Tracking code:', trackingCode);
 
-    // ✅ 5. CAPTURAR PARÂMETROS DO TRÁFEGO
-    const trafficParams = getTrafficParams();
+    // ✅ 5. CAPTURAR PARÂMETROS DO TRÁFEGO (passando parâmetros customizados)
+    const trafficParams = getTrafficParams(trackingParamPrimary, trackingParamBackup);
 
     // ✅ 6. SALVAR NO COOKIE
     setCookie(COOKIE_NAME, trackingCode, COOKIE_DAYS);
@@ -183,13 +192,13 @@
               }
             });
 
-            // ✅ ADICIONAR utm_term (tracking code do Split2 - PRINCIPAL)
-            // SEMPRE sobrescrever utm_term (mesmo se já existir)
-            url.searchParams.set('utm_term', trackingCode);
+            // ✅ ADICIONAR parâmetro primário (tracking code do Split2)
+            // SEMPRE sobrescrever (mesmo se já existir)
+            url.searchParams.set(trackingParamPrimary, trackingCode);
 
-            // ✅ ADICIONAR subid (tracking code do Split2 - BACKUP)
-            // SEMPRE sobrescrever subid (mesmo se já existir)
-            url.searchParams.set('subid', trackingCode);
+            // ✅ ADICIONAR parâmetro backup (tracking code do Split2)
+            // SEMPRE sobrescrever (mesmo se já existir)
+            url.searchParams.set(trackingParamBackup, trackingCode);
             
             // Atualizar link
             link.setAttribute('href', url.toString());

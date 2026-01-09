@@ -72,7 +72,7 @@ async function handleRequest(request) {
         `<head><base href="${destinationDomain}/">`
       );
       
-      // ⭐ INJETAR SCRIPT PARA CORRIGIR PIXELS ⭐
+      // ⭐ INJETAR SCRIPT PARA CORRIGIR PIXELS E TRACKING PARAMS ⭐
       const pixelFixScript = `
 <script>
 (function() {
@@ -80,6 +80,13 @@ async function handleRequest(request) {
   window.__REAL_DESTINATION_URL = "${destinationUrl}";
   window.__PROXY_URL = "${url.href}";
   window.__TRACKING_DATA = ${JSON.stringify(data)};
+
+  // ✅ Injetar parâmetros customizados de tracking para o tracking.js
+  window.__SPLIT2_TEST_ID__ = ${data.campaignId};
+  window.__SPLIT2_VARIATION_ID__ = ${data.variationId};
+  window.__SPLIT2_CLICK_ID__ = "${data.clickId}";
+  window.__SPLIT2_TRACKING_PARAM_PRIMARY__ = "${data.trackingParamPrimary || 'utm_term'}";
+  window.__SPLIT2_TRACKING_PARAM_BACKUP__ = "${data.trackingParamBackup || 'subid'}";
   
   // Interceptar fbq (Meta Pixel) para adicionar URL real
   if (typeof fbq !== 'undefined') {

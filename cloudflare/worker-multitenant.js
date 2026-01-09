@@ -75,8 +75,7 @@ async function handleRequest(request) {
         `<head><base href="${destinationOrigin}/">`
       );
       
-      // ⭐ SCRIPT PARA PIXELS (apenas se necessário)
-      // Como são mesmo domínio, cookies já funcionam!
+      // ⭐ SCRIPT PARA PIXELS E TRACKING PARAMS
       const trackingScript = `
 <script>
 // Dados de tracking disponíveis
@@ -88,6 +87,13 @@ window.__SPLIT2_TRACKING = ${JSON.stringify({
   proxyUrl: url.href,
   destinationUrl: destinationUrl
 })};
+
+// ✅ Variáveis para tracking.js
+window.__SPLIT2_TEST_ID__ = ${data.campaignId};
+window.__SPLIT2_VARIATION_ID__ = ${data.variationId};
+window.__SPLIT2_CLICK_ID__ = "${data.clickId}";
+window.__SPLIT2_TRACKING_PARAM_PRIMARY__ = "${data.trackingParamPrimary || 'utm_term'}";
+window.__SPLIT2_TRACKING_PARAM_BACKUP__ = "${data.trackingParamBackup || 'subid'}";
 
 // Se quiser enviar eventos customizados para Split2
 window.Split2 = {

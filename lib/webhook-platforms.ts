@@ -98,6 +98,14 @@ export const WEBHOOK_PLATFORMS = {
     icon: '🎯',
     description: 'Checkout e gestão de vendas',
   },
+
+  // ✅ INTEGRAÇÃO UNIVERSAL
+  universal: {
+    id: 'universal',
+    name: 'Integração Universal',
+    icon: '🔌',
+    description: 'Configure seus parâmetros personalizados na página Minha Conta',
+  },
 } as const;
 
 export type WebhookPlatformId = keyof typeof WEBHOOK_PLATFORMS;
