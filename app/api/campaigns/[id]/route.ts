@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
 
 // GET /api/campaigns/[id] - Buscar campanha
 export async function GET(
@@ -59,6 +60,9 @@ export async function PUT(
       where: {
         id: campaignId,
         userId: parseInt(session.user.id)
+      },
+      include: {
+        user: true
       }
     });
 
@@ -66,11 +70,24 @@ export async function PUT(
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
 
+    // ✅ VERIFICAR LIMITE DE VARIAÇÕES BASEADO NO PLANO
+    const userPlan = existing.user.plan || 'free';
+    const planId = planNameToId(userPlan);
+    const planLimits = getPlanLimits(planId);
+
+    if (variations.length > planLimits.variations) {
+      return NextResponse.json({
+        error: `Seu plano ${planLimits.name} permite apenas ${planLimits.variations} variações. Faça upgrade para o plano PRO para usar 3 variações.`,
+        limit: planLimits.variations,
+        current: variations.length
+      }, { status: 403 });
+    }
+
     // Validar soma de weights
     const totalWeight = variations.reduce((sum: number, v: any) => sum + (v.weight || 0), 0);
     if (totalWeight !== 100) {
-      return NextResponse.json({ 
-        error: `A soma das porcentagens deve ser 100%. Atual: ${totalWeight}%` 
+      return NextResponse.json({
+        error: `A soma das porcentagens deve ser 100%. Atual: ${totalWeight}%`
       }, { status: 400 });
     }
 
@@ -93,7 +110,34 @@ export async function PUT(
       }
     });
 
-    // Atualizar variações
+    // ✅ BUSCAR VARIAÇÕES EXISTENTES
+    const existingVariations = await db.variation.findMany({
+      where: { campaignId },
+      select: { id: true }
+    });
+
+    // ✅ IDs das variações enviadas pelo frontend
+    const sentVariationIds = variations
+      .filter((v: any) => v.id)
+      .map((v: any) => v.id);
+
+    // ✅ IDENTIFICAR VARIAÇÕES QUE FORAM REMOVIDAS
+    const variationsToDelete = existingVariations
+      .filter(v => !sentVariationIds.includes(v.id))
+      .map(v => v.id);
+
+    // ✅ DELETAR VARIAÇÕES REMOVIDAS
+    if (variationsToDelete.length > 0) {
+      await db.variation.deleteMany({
+        where: {
+          id: { in: variationsToDelete },
+          campaignId // Segurança extra
+        }
+      });
+      console.log(`[Campaign API] Deleted ${variationsToDelete.length} variation(s):`, variationsToDelete);
+    }
+
+    // ✅ ATUALIZAR/CRIAR VARIAÇÕES
     for (const variation of variations) {
       if (variation.id) {
         // Atualizar variação existente

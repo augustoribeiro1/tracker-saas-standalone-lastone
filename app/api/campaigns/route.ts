@@ -92,6 +92,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ VALIDAR LIMITE DE VARIAÇÕES BASEADO NO PLANO
+    if (variations.length > planLimits.variations) {
+      return NextResponse.json({
+        error: `Seu plano ${planLimits.name} permite apenas ${planLimits.variations} variações. Faça upgrade para o plano PRO para usar 3 variações.`,
+        limit: planLimits.variations,
+        current: variations.length
+      }, { status: 403 });
+    }
+
     // Validar checkout URL se conversão secundária estiver ativada
     if (enableSecondaryConversion && !checkoutUrl) {
       return NextResponse.json({
