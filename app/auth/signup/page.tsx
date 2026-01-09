@@ -1,10 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import bcrypt from 'bcryptjs';
+import Script from 'next/script';
+
+declare global {
+  interface Window {
+    grecaptcha: any;
+  }
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -16,6 +22,22 @@ export default function SignupPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const recaptchaWidgetId = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (recaptchaLoaded && recaptchaRef.current && !recaptchaWidgetId.current) {
+      try {
+        recaptchaWidgetId.current = window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: '6LfN3EQsAAAAAA6mWfm8xdn4TQFiCx6_GA55i43X',
+          theme: 'light',
+        });
+      } catch (error) {
+        console.error('Error rendering reCAPTCHA:', error);
+      }
+    }
+  }, [recaptchaLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +53,18 @@ export default function SignupPage() {
       return;
     }
 
+    // Validar reCAPTCHA
+    if (!window.grecaptcha || recaptchaWidgetId.current === null) {
+      setError('Por favor, aguarde o carregamento do reCAPTCHA');
+      return;
+    }
+
+    const recaptchaToken = window.grecaptcha.getResponse(recaptchaWidgetId.current);
+    if (!recaptchaToken) {
+      setError('Por favor, complete a verificação do reCAPTCHA');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -41,6 +75,7 @@ export default function SignupPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
+          recaptchaToken: recaptchaToken,
         }),
       });
 
@@ -48,120 +83,140 @@ export default function SignupPage() {
 
       if (!response.ok) {
         setError(data.error || 'Erro ao criar conta');
+        // Reset reCAPTCHA
+        if (recaptchaWidgetId.current !== null) {
+          window.grecaptcha.reset(recaptchaWidgetId.current);
+        }
         return;
       }
 
       router.push('/auth/login?registered=true');
     } catch (error) {
       setError('Erro ao criar conta');
+      // Reset reCAPTCHA
+      if (recaptchaWidgetId.current !== null) {
+        window.grecaptcha.reset(recaptchaWidgetId.current);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Criar Conta
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Comece seu teste grátis
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">{error}</div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Nome
-              </label>
-              <input
-                id="name"
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border-2 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white text-gray-900"
-                placeholder="••••••••"
-              />
-              {formData.password && (
-                <p className="mt-1 text-xs text-gray-500">
-                  {formData.password.length} caracteres digitados
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirmar Senha
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border-2 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white text-gray-900"
-                placeholder="••••••••"
-              />
-              {formData.confirmPassword && (
-                <p className="mt-1 text-xs text-gray-500">
-                  {formData.confirmPassword.length} caracteres digitados
-                </p>
-              )}
-            </div>
-          </div>
-
+    <>
+      <Script
+        src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit"
+        strategy="lazyOnload"
+        onLoad={() => setRecaptchaLoaded(true)}
+      />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
           <div>
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Criando conta...' : 'Criar Conta'}
-            </Button>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Criar Conta
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Comece seu teste grátis
+            </p>
           </div>
 
-          <div className="text-center text-sm">
-            <span className="text-gray-600">Já tem uma conta? </span>
-            <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
-              Fazer login
-            </Link>
-          </div>
-        </form>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="text-sm text-red-800">{error}</div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  Nome
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Senha
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="mt-1 appearance-none block w-full px-3 py-2 border-2 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white text-gray-900"
+                  placeholder="••••••••"
+                />
+                {formData.password && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formData.password.length} caracteres digitados
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  Confirmar Senha
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="mt-1 appearance-none block w-full px-3 py-2 border-2 border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white text-gray-900"
+                  placeholder="••••••••"
+                />
+                {formData.confirmPassword && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formData.confirmPassword.length} caracteres digitados
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* reCAPTCHA */}
+            <div className="flex justify-center">
+              <div ref={recaptchaRef}></div>
+            </div>
+
+            <div>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? 'Criando conta...' : 'Criar Conta'}
+              </Button>
+            </div>
+
+            <div className="text-center text-sm">
+              <span className="text-gray-600">Já tem uma conta? </span>
+              <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
+                Fazer login
+              </Link>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -4,13 +4,50 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, recaptchaToken } = await request.json();
 
     // Validar dados
     if (!email || !password || !name) {
       return NextResponse.json(
         { error: 'Dados incompletos' },
         { status: 400 }
+      );
+    }
+
+    // Validar reCAPTCHA
+    if (!recaptchaToken) {
+      return NextResponse.json(
+        { error: 'Verificação reCAPTCHA obrigatória' },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const recaptchaResponse = await fetch(
+        'https://www.google.com/recaptcha/api/siteverify',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `secret=6LfN3EQsAAAAAOu4mHAgvTKzwCKoBJVkX552ylnF&response=${recaptchaToken}`,
+        }
+      );
+
+      const recaptchaData = await recaptchaResponse.json();
+
+      if (!recaptchaData.success) {
+        console.error('[Signup] reCAPTCHA validation failed:', recaptchaData);
+        return NextResponse.json(
+          { error: 'Verificação reCAPTCHA falhou. Por favor, tente novamente.' },
+          { status: 400 }
+        );
+      }
+    } catch (recaptchaError) {
+      console.error('[Signup] reCAPTCHA verification error:', recaptchaError);
+      return NextResponse.json(
+        { error: 'Erro ao verificar reCAPTCHA' },
+        { status: 500 }
       );
     }
 
