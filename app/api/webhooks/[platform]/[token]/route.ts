@@ -1,8 +1,20 @@
 // /app/api/webhooks/[platform]/[token]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getPlanLimits, planNameToId } from '@/lib/plan-limits';
 
 const CLICKID_PREFIX = 'split2_';
+
+/**
+ * ✅ CALCULAR DATA DE EXPIRAÇÃO BASEADO NO PLANO DO USUÁRIO
+ */
+function calculateExpiresAt(userPlan: string): Date {
+  const planId = planNameToId(userPlan);
+  const limits = getPlanLimits(planId);
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + limits.dataRetentionDays);
+  return expiresAt;
+}
 
 /**
  * ✅ BUSCA CLICKID EM QUERY PARAMS (POSTBACK)
@@ -322,7 +334,8 @@ export async function POST(
           utmMedium: utms.utmMedium,
           utmCampaign: utms.utmCampaign,
           utmContent: utms.utmContent,
-          utmTerm: utms.utmTerm
+          utmTerm: utms.utmTerm,
+          expiresAt: calculateExpiresAt(user.plan || 'free') // ✅ Data de expiração
         }
       });
 
@@ -370,7 +383,8 @@ export async function POST(
           eventName: productName,
           eventValue: value || 0,
           clickId: clickId, // Guarda o clickId mesmo não encontrando
-          userId: user.id
+          userId: user.id,
+          expiresAt: calculateExpiresAt(user.plan || 'free') // ✅ Data de expiração
         }
       });
 
@@ -413,7 +427,8 @@ export async function POST(
         utmMedium: utms.utmMedium,
         utmCampaign: utms.utmCampaign,
         utmContent: utms.utmContent,
-        utmTerm: utms.utmTerm
+        utmTerm: utms.utmTerm,
+        expiresAt: calculateExpiresAt(user.plan || 'free') // ✅ Data de expiração
       }
     });
 
@@ -493,7 +508,8 @@ export async function GET(
           eventName: 'Postback without clickId',
           eventValue: 0,
           clickId: 'untracked',
-          userId: user.id
+          userId: user.id,
+          expiresAt: calculateExpiresAt(user.plan || 'free') // ✅ Data de expiração
         }
       });
 
@@ -536,7 +552,8 @@ export async function GET(
           eventName: 'Postback with invalid clickId',
           eventValue: 0,
           clickId: clickId,
-          userId: user.id
+          userId: user.id,
+          expiresAt: calculateExpiresAt(user.plan || 'free') // ✅ Data de expiração
         }
       });
 
@@ -594,7 +611,8 @@ export async function GET(
         utmMedium: searchParams.get('utm_medium'),
         utmCampaign: searchParams.get('utm_campaign'),
         utmContent: searchParams.get('utm_content'),
-        utmTerm: searchParams.get('utm_term')
+        utmTerm: searchParams.get('utm_term'),
+        expiresAt: calculateExpiresAt(user.plan || 'free') // ✅ Data de expiração
       }
     });
 

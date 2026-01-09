@@ -127,17 +127,19 @@ model Event {
   utmTerm      String?
   utmContent   String?
   createdAt    DateTime @default(now())
-  
+  expiresAt    DateTime? // ✅ Data de expiração baseada no plano do usuário
+
   user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaign  Campaign?  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   variation Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([clickId])
   @@index([campaignId])
   @@index([variationId])
   @@index([eventType])
   @@index([createdAt])
+  @@index([expiresAt]) // ✅ Índice para otimizar limpeza
 }
 
 model WebhookConfiguration {
@@ -266,16 +268,18 @@ model Click {
   domain      String?
   userAgent   String?
   referer     String?
-  clickid     String?   @unique  
+  clickid     String?   @unique
   createdAt   DateTime  @default(now())
-  
+  expiresAt   DateTime? // ✅ Data de expiração baseada no plano do usuário
+
   campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   variation   Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
-  
+
   @@index([campaignId])
   @@index([variationId])
   @@index([createdAt])
   @@index([clickid])
+  @@index([expiresAt]) // ✅ Índice para otimizar limpeza
 }
 
 model Conversion {

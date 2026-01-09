@@ -7,6 +7,7 @@ export const PLAN_LIMITS = {
     customDomains: 0,
     variations: 2,
     views: Infinity,
+    dataRetentionDays: 30, // ✅ Retenção de 30 dias
     upgradeMessage: 'Faça upgrade para o plano Starter para adicionar mais'
   },
   2: { // STARTER
@@ -16,6 +17,7 @@ export const PLAN_LIMITS = {
     customDomains: 1,
     variations: 2,
     views: Infinity,
+    dataRetentionDays: 90, // ✅ Retenção de 90 dias
     upgradeMessage: 'Faça upgrade para o plano Pro para adicionar mais'
   },
   3: { // PRO
@@ -25,6 +27,7 @@ export const PLAN_LIMITS = {
     customDomains: 3,
     variations: 3,
     views: Infinity,
+    dataRetentionDays: 180, // ✅ Retenção de 180 dias
     upgradeMessage: 'Entre em contato com o suporte para um plano personalizado'
   }
 };
