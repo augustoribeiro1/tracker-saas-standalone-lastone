@@ -35,6 +35,7 @@ export default function PricingPage() {
   const { data: session } = useSession();
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPlans();
@@ -48,16 +49,35 @@ export default function PricingPage() {
   };
 
   const handleUpgrade = async (planId: string) => {
-    const res = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId, interval: 'monthly' })
-    });
+    try {
+      setProcessingPlanId(planId);
 
-    const data = await res.json();
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId, interval: 'monthly' })
+      });
 
-    if (data.url) {
-      window.location.href = data.url;
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('Erro ao criar checkout:', data);
+        alert(`Erro: ${data.error || 'Não foi possível criar a sessão de checkout'}`);
+        setProcessingPlanId(null);
+        return;
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('Nenhuma URL retornada:', data);
+        alert('Erro: Nenhuma URL de checkout retornada');
+        setProcessingPlanId(null);
+      }
+    } catch (error) {
+      console.error('Erro ao processar checkout:', error);
+      alert('Erro ao processar checkout. Verifique o console para mais detalhes.');
+      setProcessingPlanId(null);
     }
   };
 
@@ -150,8 +170,9 @@ export default function PricingPage() {
                           onClick={() => handleUpgrade(plan.id)}
                           className="w-full"
                           variant={plan.popular ? 'default' : 'outline'}
+                          disabled={processingPlanId !== null}
                         >
-                          Assinar Agora
+                          {processingPlanId === plan.id ? 'Processando...' : 'Assinar Agora'}
                         </Button>
                       )}
                     </div>
