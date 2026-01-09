@@ -636,3 +636,23 @@ export async function GET(
     );
   }
 }
+
+// ✅ ACEITAR HEAD REQUEST (Validação de URL por plataformas)
+// Muitas plataformas fazem HEAD antes de GET/POST para validar
+export async function HEAD(
+  request: NextRequest,
+  { params }: { params: { platform: string; token: string } }
+) {
+  console.log('[Webhook] Received HEAD (validation):', params.platform);
+
+  // Retornar apenas headers sem body (HEAD não deve ter body)
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Content-Type': 'image/gif',
+      'Content-Length': '43',
+      'Cache-Control': 'no-cache',
+      'Accept-Ranges': 'bytes'
+    }
+  });
+}
